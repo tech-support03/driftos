@@ -32,6 +32,21 @@ fi
 # Microcode is harmless to include — installer picks the active CPU's loader.
 BASE_PKGS+=( intel-ucode amd-ucode )
 
+# Laptop profile pulls in power-management + ACPI + brightness early so the
+# system has working battery/lid behavior from first boot. Things like
+# tlp.service are enabled in the chroot config step.
+if [[ "$PROFILE" == "laptop" ]]; then
+    BASE_PKGS+=(
+        tlp tlp-rdw
+        acpi acpid
+        upower
+        brightnessctl
+        bluez bluez-utils
+        wpa_supplicant
+        iio-sensor-proxy        # auto rotation if hw supports it
+    )
+fi
+
 # Mirror selection — let the user fix this post-install if desired.
 log "Updating mirrorlist via reflector if available"
 if command -v reflector >/dev/null 2>&1; then

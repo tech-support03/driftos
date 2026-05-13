@@ -12,6 +12,10 @@ case "$PROFILE" in
         log "Applying personal 3-monitor topology to kanshi"
         install -Dm644 "$DOTFILES_DIR/kanshi/config.personal" "$CFG_DIR/config"
         ;;
+    laptop)
+        log "Applying laptop single-panel + dock profiles to kanshi"
+        install -Dm644 "$DOTFILES_DIR/kanshi/config.laptop"   "$CFG_DIR/config"
+        ;;
     vm|*)
         log "Applying VM fallback display layout to kanshi"
         install -Dm644 "$DOTFILES_DIR/kanshi/config.vm" "$CFG_DIR/config"

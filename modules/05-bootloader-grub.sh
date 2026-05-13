@@ -32,11 +32,20 @@ log "Using EFI directory: $EFI_DIR"
 
 if [[ -d /sys/firmware/efi ]]; then
     # Inside chroot the path '/boot' is the ESP; default is right.
+    # USB targets get --removable so the binary lands at \EFI\BOOT\BOOTX64.EFI
+    # (firmware fallback path) — meaning the USB will boot on ANY UEFI machine
+    # without requiring an NVRAM entry on the specific laptop. SSDs get a
+    # named NVRAM entry so the firmware boot menu has a friendly label.
+    GRUB_EXTRA=()
+    if [[ "${TARGET_TYPE:-ssd}" == "usb" ]]; then
+        GRUB_EXTRA+=( --removable )
+        log "USB target: installing GRUB with --removable (portable to any UEFI)"
+    fi
     sudo grub-install \
         --target=x86_64-efi \
         --efi-directory="$EFI_DIR" \
         --bootloader-id=GRUB \
-        --recheck
+        --recheck "${GRUB_EXTRA[@]}"
 else
     # BIOS: $DISK is required. Bootstrap exports it; standalone callers must set it.
     DISK="${DISK:-}"

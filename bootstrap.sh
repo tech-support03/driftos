@@ -43,8 +43,10 @@ TIMEZONE="${TIMEZONE:-America/New_York}"
 LOCALE="${LOCALE:-en_US.UTF-8}"
 KEYMAP="${KEYMAP:-us}"
 PROFILE="${PROFILE:-vm}"
+TARGET_TYPE="${TARGET_TYPE:-auto}"        # ssd | usb | auto
 SECURE_BOOT="${SECURE_BOOT:-false}"
 ASSUME_YES="${ASSUME_YES:-false}"
+FORCE_USB_SECURE_BOOT="${FORCE_USB_SECURE_BOOT:-false}"
 USER_PASSWORD="${USER_PASSWORD:-}"
 ROOT_PASSWORD="${ROOT_PASSWORD:-}"
 
@@ -57,16 +59,21 @@ while [[ $# -gt 0 ]]; do
         --locale)       LOCALE="$2"; shift 2 ;;
         --keymap)       KEYMAP="$2"; shift 2 ;;
         --profile)      PROFILE="$2"; shift 2 ;;
+        --target)       TARGET_TYPE="$2"; shift 2 ;;
         --secure-boot)  SECURE_BOOT="true"; shift ;;
         --no-secure-boot) SECURE_BOOT="false"; shift ;;
+        --force-usb-secure-boot) FORCE_USB_SECURE_BOOT="true"; shift ;;
         --yes|-y)       ASSUME_YES="true"; shift ;;
         -h|--help)      sed -n '2,28p' "$0"; exit 0 ;;
         *) echo "Unknown arg: $1" >&2; exit 2 ;;
     esac
 done
 
-[[ "$PROFILE" == "vm" || "$PROFILE" == "personal" ]] || {
-    echo "PROFILE must be 'vm' or 'personal'"; exit 2;
+[[ "$PROFILE" == "vm" || "$PROFILE" == "personal" || "$PROFILE" == "laptop" ]] || {
+    echo "PROFILE must be one of: vm | personal | laptop"; exit 2;
+}
+[[ "$TARGET_TYPE" == "ssd" || "$TARGET_TYPE" == "usb" || "$TARGET_TYPE" == "auto" ]] || {
+    echo "TARGET_TYPE must be: ssd | usb | auto"; exit 2;
 }
 
 # ---- color helpers (re-exported so stage scripts inherit) ------------------
@@ -110,10 +117,36 @@ prompt_password() {
 
 if [[ -z "$DISK" ]]; then
     log "Available block devices:"
-    lsblk -dpno NAME,SIZE,MODEL | grep -Ev 'loop|sr0|rom' || true
+    # Include REM (removable) and TRAN (transport: usb/nvme/sata) so it's
+    # obvious which device is a USB stick vs. the internal disk.
+    lsblk -dpno NAME,SIZE,MODEL,TRAN,REM | grep -Ev 'loop|sr0|rom' || true
     prompt_default DISK "Target disk (will be ERASED)" "/dev/sda"
 fi
 [[ -b "$DISK" ]] || die "Disk $DISK does not exist."
+
+# Auto-detect SSD vs USB from /sys metadata if the user didn't specify.
+detect_target_type() {
+    local d
+    d="$(basename "$DISK" | sed -E 's/p?[0-9]+$//')"
+    local rem tran
+    rem="$(cat "/sys/block/$d/removable" 2>/dev/null || echo 0)"
+    tran="$(lsblk -dno TRAN "$DISK" 2>/dev/null || echo)"
+    if [[ "$rem" == "1" || "$tran" == "usb" ]]; then echo usb; else echo ssd; fi
+}
+if [[ "$TARGET_TYPE" == "auto" ]]; then
+    TARGET_TYPE="$(detect_target_type)"
+    log "Auto-detected target type: $TARGET_TYPE  (override with --target ssd|usb)"
+fi
+
+# Secure Boot on a USB target writes keys to the LAPTOP firmware NVRAM (not
+# the USB itself), which defeats the point of testing on removable media.
+# Refuse unless the user explicitly overrides with --force-usb-secure-boot.
+if [[ "$TARGET_TYPE" == "usb" && "$SECURE_BOOT" == "true" && "$FORCE_USB_SECURE_BOOT" != "true" ]]; then
+    warn "USB target + Secure Boot enrolls keys into the LAPTOP firmware,"
+    warn "which affects any other OS installed on this machine. Disabling SB"
+    warn "for this run. Pass --force-usb-secure-boot to override."
+    SECURE_BOOT="false"
+fi
 
 prompt_default TARGET_USERNAME "Username" "arjun"
 prompt_default TARGET_HOSTNAME "Hostname" "driftos"
@@ -122,20 +155,24 @@ prompt_default TIMEZONE "Timezone (e.g. America/New_York)" "$TIMEZONE"
 prompt_password USER_PASSWORD "Password for $TARGET_USERNAME"
 prompt_password ROOT_PASSWORD "Password for root"
 
-export DISK TARGET_HOSTNAME TARGET_USERNAME TIMEZONE LOCALE KEYMAP PROFILE SECURE_BOOT USER_PASSWORD ROOT_PASSWORD ASSUME_YES
+export DISK TARGET_TYPE TARGET_HOSTNAME TARGET_USERNAME TIMEZONE LOCALE KEYMAP \
+       PROFILE SECURE_BOOT USER_PASSWORD ROOT_PASSWORD ASSUME_YES
 
 # ---- summary + confirmation -----------------------------------------------
+disk_size="$(lsblk -dpno SIZE "$DISK" 2>/dev/null || echo '?')"
+disk_model="$(lsblk -dpno MODEL "$DISK" 2>/dev/null | xargs || echo '?')"
 c_yellow ""
 c_yellow "═══════════════════════════════════════════════════════════"
 c_yellow "  About to DESTROY all data on $DISK and install Arch."
 c_yellow "═══════════════════════════════════════════════════════════"
-c_dim    "  Disk:           $DISK"
+c_dim    "  Disk:           $DISK   ($disk_size  $disk_model)"
+c_dim    "  Target type:    $TARGET_TYPE"
 c_dim    "  Hostname:       $TARGET_HOSTNAME"
 c_dim    "  User:           $TARGET_USERNAME"
 c_dim    "  Timezone:       $TIMEZONE"
 c_dim    "  Locale:         $LOCALE"
 c_dim    "  Profile:        $PROFILE"
-c_dim    "  Bootloader:     $([[ "$SECURE_BOOT" == "true" ]] && echo 'Limine + sbctl (Secure Boot)' || echo 'GRUB')"
+c_dim    "  Bootloader:     $([[ "$SECURE_BOOT" == "true" ]] && echo 'Limine + sbctl (Secure Boot)' || echo "GRUB$([[ "$TARGET_TYPE" == "usb" ]] && echo ' (--removable, portable)')")"
 c_yellow ""
 if [[ "$ASSUME_YES" != "true" ]]; then
     read -r -p "Type ERASE to continue, anything else to abort: " ack < /dev/tty || true
@@ -165,6 +202,7 @@ arch-chroot /mnt /bin/bash -lc "
     export TARGET_HOSTNAME='$TARGET_HOSTNAME' TARGET_USERNAME='$TARGET_USERNAME' \
            TIMEZONE='$TIMEZONE' LOCALE='$LOCALE' KEYMAP='$KEYMAP' \
            PROFILE='$PROFILE' SECURE_BOOT='$SECURE_BOOT' \
+           TARGET_TYPE='$TARGET_TYPE' \
            USER_PASSWORD='$USER_PASSWORD' ROOT_PASSWORD='$ROOT_PASSWORD' \
            IS_CHROOT=1 MODULES_DIR=/root/modules
     bash /root/04-chroot-config.sh

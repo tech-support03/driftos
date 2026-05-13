@@ -1,0 +1,23 @@
+# ~/.config/kanshi/config (laptop profile)
+# Single internal panel, auto-fit to the actual hardware. Common laptop
+# panel names are eDP-1 (Intel/AMD), eDP, and LVDS-1; kanshi's wildcard
+# matches all of them so the same profile works across hardware.
+
+profile laptop-internal {
+    output * mode preferred position 0,0 scale 1 enable
+}
+
+# When the laptop is docked with an external monitor on the right,
+# kanshi will pick this profile if BOTH outputs match. Adjust the
+# external output name (`HDMI-A-1` is common on Intel/AMD) to what
+# `niri msg outputs` reports on your hardware.
+profile docked-right {
+    output eDP-1     mode preferred position 0,0    scale 1 enable
+    output HDMI-A-1  mode preferred position 1920,0 scale 1 enable
+}
+
+# Lid closed + external monitor → mirror to external only.
+profile lid-closed-external {
+    output eDP-1     disable
+    output HDMI-A-1  mode preferred position 0,0 scale 1 enable
+}

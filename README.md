@@ -82,19 +82,61 @@ cd ~/arch-setup
 
 ## bootstrap.sh — bare-metal flags
 
-| flag                 | env-var          | meaning                                      |
-| -------------------- | ---------------- | -------------------------------------------- |
-| `--disk PATH`        | `DISK`           | target block device (will be ERASED)         |
-| `--hostname NAME`    | `HOSTNAME`       | hostname                                     |
-| `--user NAME`        | `USERNAME`       | primary user (added to `wheel`)              |
-| `--timezone TZ`      | `TIMEZONE`       | e.g. `America/New_York`                      |
-| `--locale LOCALE`    | `LOCALE`         | default `en_US.UTF-8`                        |
-| `--keymap KMAP`      | `KEYMAP`         | default `us`                                 |
-| `--profile NAME`     | `PROFILE`        | `vm` or `personal`                           |
-| `--secure-boot`      | `SECURE_BOOT`    | Limine + sbctl Secure Boot setup             |
-| `--yes`              | `ASSUME_YES`     | skip the "type ERASE to continue" prompt     |
-|                      | `USER_PASSWORD`  | non-interactive user password                |
-|                      | `ROOT_PASSWORD`  | non-interactive root password                |
+| flag                 | env-var                 | meaning                                      |
+| -------------------- | ----------------------- | -------------------------------------------- |
+| `--disk PATH`        | `DISK`                  | target block device (will be ERASED)         |
+| `--hostname NAME`    | `TARGET_HOSTNAME`       | hostname                                     |
+| `--user NAME`        | `TARGET_USERNAME`       | primary user (added to `wheel`)              |
+| `--timezone TZ`      | `TIMEZONE`              | e.g. `America/New_York`                      |
+| `--locale LOCALE`    | `LOCALE`                | default `en_US.UTF-8`                        |
+| `--keymap KMAP`      | `KEYMAP`                | default `us`                                 |
+| `--profile NAME`     | `PROFILE`               | `vm` \| `personal` \| `laptop`               |
+| `--target TYPE`      | `TARGET_TYPE`           | `ssd` \| `usb` \| `auto` (default)           |
+| `--secure-boot`      | `SECURE_BOOT`           | Limine + sbctl Secure Boot setup             |
+| `--force-usb-secure-boot` | `FORCE_USB_SECURE_BOOT` | allow SB+USB combo (rare; see warning)   |
+| `--yes`              | `ASSUME_YES`            | skip the "type ERASE to continue" prompt     |
+|                      | `USER_PASSWORD`         | non-interactive user password                |
+|                      | `ROOT_PASSWORD`         | non-interactive root password                |
+
+### Profiles
+
+| Profile    | Display layout                            | Runtime extras                                       |
+| ---------- | ----------------------------------------- | ---------------------------------------------------- |
+| `vm`       | Single virtual 1920×1080 wildcard         | —                                                    |
+| `personal` | 3-monitor topology in kanshi + niri       | —                                                    |
+| `laptop`   | Single internal panel (eDP-1/eDP/LVDS-1)  | TLP, acpid, bluetooth, lid-switch=suspend, brightness |
+
+### Target type
+
+`--target` controls mount options and bootloader install style:
+
+| Target | ESP size | Root mount opts                | GRUB install        |
+| ------ | -------- | ------------------------------ | ------------------- |
+| `ssd`  | 1 GiB    | `noatime,discard=async`        | NVRAM entry "GRUB"  |
+| `usb`  | 512 MiB  | `noatime,nodiratime,commit=120`| `--removable` (portable to any UEFI machine via `\EFI\BOOT\BOOTX64.EFI`) |
+| `auto` | —        | reads `/sys/block/.../removable` and `lsblk TRAN`, picks ssd/usb     |
+
+`fstrim.timer` is enabled automatically on `ssd` targets.
+
+### USB testing on a laptop (recommended workflow before bare-metal install)
+
+1. Plug in a fast USB 3.x stick or USB-NVMe enclosure (≥ 16 GiB).
+2. Boot the Arch ISO in UEFI mode (laptop firmware boot menu → ISO USB).
+3. `pacman -Sy --noconfirm git && git clone https://github.com/tech-support03/driftos.git ~/arch-setup`
+4. `cd ~/arch-setup && ./install.sh --disk /dev/sdX --user you --profile laptop --target usb`
+   — **double-check** the disk path; on most laptops the internal SSD is
+   `/dev/nvme0n1` and the USB is `/dev/sda` or similar, but verify with
+   `lsblk -dpno NAME,SIZE,MODEL,TRAN,REM`. The installer prints disk size/model
+   in its confirmation prompt for the same reason.
+5. After install completes, reboot into the firmware boot menu and pick the
+   USB drive. The `--removable` GRUB install means it works on any UEFI
+   machine without touching laptop NVRAM.
+
+If the USB-installed system works on your hardware, redo step 4 against the
+internal SSD with `--target ssd --secure-boot`. Don't enable Secure Boot on
+the USB run — `sbctl` enrolls keys into the laptop's firmware NVRAM, which
+defeats the whole point of using a USB. The installer refuses this combo by
+default; use `--force-usb-secure-boot` only if you understand the trade-off.
 
 Disk layout written by `iso-stage/02-disk.sh`:
 

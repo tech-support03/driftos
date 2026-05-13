@@ -59,8 +59,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-[[ "$PROFILE" == "vm" || "$PROFILE" == "personal" ]] || {
-    echo "PROFILE must be 'vm' or 'personal'"; exit 2;
+[[ "$PROFILE" == "vm" || "$PROFILE" == "personal" || "$PROFILE" == "laptop" ]] || {
+    echo "PROFILE must be one of: vm | personal | laptop"; exit 2;
 }
 
 export PROFILE

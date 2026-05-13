@@ -64,6 +64,30 @@ output "Virtual-2" {
 }
 
 // =============================================================================
+//  OUTPUTS — laptop internal panel. Most laptops expose eDP-1 (some are
+//  bare "eDP" or "LVDS-1"). Niri ignores output blocks for connectors that
+//  don't exist on the machine, so leaving these here is safe everywhere.
+//
+//  `mode "preferred"` defers to the panel's preferred mode (EDID), which is
+//  the right call for laptops where the resolution and refresh rate vary.
+// =============================================================================
+output "eDP-1" {
+    mode "preferred"
+    position x=0 y=0
+    scale 1.0
+}
+output "eDP" {
+    mode "preferred"
+    position x=0 y=0
+    scale 1.0
+}
+output "LVDS-1" {
+    mode "preferred"
+    position x=0 y=0
+    scale 1.0
+}
+
+// =============================================================================
 //  Layout, gaps, focus ring (borderless).
 // =============================================================================
 layout {

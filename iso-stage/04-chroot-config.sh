@@ -74,6 +74,31 @@ visudo -cf /etc/sudoers.d/10-wheel >/dev/null || die "sudoers drop-in failed val
 log "Enabling NetworkManager"
 systemctl enable NetworkManager.service
 
+# ---- laptop-only services + lid behavior -----------------------------------
+if [[ "${PROFILE:-}" == "laptop" ]]; then
+    log "Laptop profile: enabling TLP, acpid, bluetooth; configuring lid switch"
+    systemctl enable tlp.service     2>/dev/null || true
+    systemctl enable acpid.service   2>/dev/null || true
+    systemctl enable bluetooth.service 2>/dev/null || true
+    # TLP's RDW (radio device wizard) responds to NM events for radio toggling.
+    systemctl enable NetworkManager-dispatcher.service 2>/dev/null || true
+
+    install -Dm644 /dev/stdin /etc/systemd/logind.conf.d/50-laptop.conf <<'EOF'
+[Login]
+HandlePowerKey=suspend
+HandleLidSwitch=suspend
+HandleLidSwitchExternalPower=suspend
+HandleLidSwitchDocked=ignore
+IdleAction=ignore
+EOF
+fi
+
+# ---- SSD targets: weekly TRIM ----------------------------------------------
+if [[ "${TARGET_TYPE:-}" == "ssd" ]]; then
+    log "SSD target: enabling fstrim.timer (weekly)"
+    systemctl enable fstrim.timer 2>/dev/null || true
+fi
+
 # ---- mkinitcpio ------------------------------------------------------------
 # Default arch HOOKS = (base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck)
 # That's fine for both GRUB and Limine. No changes needed unless adding LUKS
