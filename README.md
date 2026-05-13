@@ -237,6 +237,15 @@ Re-run `launch-bars` (installed to `~/.local/bin/`) after editing to live-reload
 
 ## Known constraints
 
+- **VMware Workstation/Player is not a supported target.** The `vmwgfx`
+  guest driver exposes a DRM device without a working GBM allocator, so
+  Niri (like every other modern Wayland compositor) refuses to start —
+  the symptom is `error adding primary node device, display-only devices
+  may not work: no allocator available for device` in the journal.
+  Enabling "Accelerate 3D Graphics" in VMware settings improves OpenGL
+  for X11 but does not fix Wayland. For VM testing, use **KVM/QEMU with
+  virtio-gpu** instead (works out of the box) or VirtualBox 7+ with VMSVGA
+  + 3D enabled. Bare metal is the intended deployment.
 - **Disk encryption (LUKS) is not included** in v1. Adding it later requires
   swapping `iso-stage/02-disk.sh` to set up LUKS2 over the root partition and
   adding `sd-encrypt` to mkinitcpio HOOKS. ESP must stay unencrypted.
@@ -245,3 +254,18 @@ Re-run `launch-bars` (installed to `~/.local/bin/`) after editing to live-reload
   on first boot and adjust if your driver reports different names.
 - **`bootstrap.sh` must run as root from the ISO**; `install.sh` (rice mode)
   must run as a normal user with sudo.
+
+## Troubleshooting
+
+If Niri shows a black screen or fails to render after login, run from a tty
+(Ctrl+Alt+F2):
+
+```bash
+gpu-check
+```
+
+It walks the virtualization detection → DRM device → kernel driver → OpenGL
+renderer → EGL/GBM → niri config-parse pipeline and prints exactly which step
+is broken. The most common failure modes (in order) are: VMware host (see
+above), missing mesa/mesa-utils, and a kernel driver other than the expected
+one for the platform.

@@ -1,16 +1,17 @@
 # ~/.config/swaylock/config — swaylock-effects
-# Translucent blur overlay of the live session, large centered clock, and
-# small weather/media widgets rendered by an indicator script we spawn
-# alongside the locker via swayidle.
+# Riced lock screen that works WITHOUT working GL effects: instead of relying
+# on `screenshots` + `effect-blur` (both of which need a real GPU pipeline,
+# and silently degrade to a plain solid background in VMs / software EGL),
+# we point swaylock at a *pre-blurred* image that modules/09-wallpapers.sh
+# generates with ImageMagick. Looks identical to the live-blur path.
 
 daemonize
 ignore-empty-password
 show-failed-attempts
 
-# ---- Background: blur the active session ------------------------------------
-screenshots
-effect-blur=18x4
-effect-vignette=0.4:0.5
+# ---- Background: pre-blurred image with vignette tint -----------------------
+image=/var/lib/lockscreen/bg.jpg
+scaling=fill
 fade-in=0.3
 
 # ---- Borderless / clean -----------------------------------------------------

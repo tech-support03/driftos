@@ -25,8 +25,11 @@ PKGS_CORE=(
     # GPU stack — required for Niri to find a working EGL renderer.
     # In a VMware/QEMU VM you ALSO need to enable 3D acceleration in the
     # hypervisor settings; the packages alone aren't enough.
-    mesa vulkan-icd-loader vulkan-swrast
+    mesa mesa-utils egl-utils vulkan-icd-loader vulkan-swrast
     xorg-xwayland
+    # ImageMagick — pre-blurs the lock-screen background at install time so
+    # swaylock doesn't need live GL effects to look riced.
+    imagemagick
 )
 
 # Detect VM hypervisor and pull in guest tools for clipboard/resolution/3D.
