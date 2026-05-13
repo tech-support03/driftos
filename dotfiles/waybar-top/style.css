@@ -1,0 +1,87 @@
+/* ~/.config/waybar-top/style.css
+   Hidden-by-default top bar. Center waveform stays visible while audio plays
+   (the `custom/waveform` module emits empty text when idle, so its background
+   transparency collapses to zero footprint). On :hover the full bar fades in
+   smoothly without clipping its children.
+*/
+
+* {
+    font-family: "JetBrainsMono Nerd Font", "Inter", system-ui;
+    font-size: 12pt;
+    font-weight: 500;
+    min-height: 0;
+    border: none;
+    box-shadow: none;
+}
+
+/* The window root — fully transparent so the bar leaves no visible footprint
+   except for hover detection. */
+window#waybar.waybar-top {
+    background: transparent;
+    color: rgba(245, 246, 250, 0.98);
+    transition: background 280ms cubic-bezier(.2,.8,.2,1);
+}
+
+/* Hover: fade in a frosted translucent backdrop. */
+window#waybar.waybar-top:hover {
+    background: rgba(18, 19, 26, 0.55);
+}
+
+/* All modules: invisible at rest, visible on hover. The waveform module
+   overrides this rule below. */
+#clock,
+#custom-calendar,
+#custom-media,
+#custom-weather,
+#custom-notifications {
+    color: rgba(245, 246, 250, 0.0);
+    background: transparent;
+    padding: 4px 14px;
+    margin: 0 2px;
+    border-radius: 12px;
+    transition: color 220ms ease, background 220ms ease;
+}
+window#waybar.waybar-top:hover #clock,
+window#waybar.waybar-top:hover #custom-calendar,
+window#waybar.waybar-top:hover #custom-media,
+window#waybar.waybar-top:hover #custom-weather,
+window#waybar.waybar-top:hover #custom-notifications {
+    color: rgba(245, 246, 250, 0.96);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Accent colors for individual widgets — liberal palette. */
+window#waybar.waybar-top:hover #clock             { color: #c4b5fd; }   /* lavender   */
+window#waybar.waybar-top:hover #custom-media      { color: #fcd34d; }   /* amber      */
+window#waybar.waybar-top:hover #custom-weather    { color: #67e8f9; }   /* cyan       */
+window#waybar.waybar-top:hover #custom-notifications { color: #fda4af; }/* coral      */
+window#waybar.waybar-top:hover #custom-calendar   { color: #86efac; }   /* mint       */
+
+/* Waveform stays visible whenever the helper emits content; dynamic width
+   prevents clipping. Generous horizontal padding so the bars never crowd the
+   edges of the container, and `min-width: 0` plus `padding: 4px 32px` makes
+   the cell collapse cleanly when the helper outputs an empty string. */
+#custom-waveform {
+    color: #a78bfa;
+    background: transparent;
+    padding: 4px 32px;
+    margin: 0 auto;
+    min-width: 0;
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 14pt;
+    letter-spacing: 0.5px;
+    border-radius: 14px;
+    transition: background 220ms ease, color 220ms ease;
+}
+window#waybar.waybar-top:hover #custom-waveform {
+    background: rgba(167, 139, 250, 0.08);
+    color: #ddd6fe;
+}
+
+/* Tooltips — translucent. */
+tooltip {
+    background: rgba(18, 19, 26, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+}
+tooltip label { color: #e5e7eb; padding: 6px 8px; }

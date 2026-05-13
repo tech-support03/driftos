@@ -1,0 +1,15 @@
+# Force LF line endings for every text file in this repo so that shell
+# scripts, config files, and dotfiles work correctly on Arch Linux when
+# cloned from a Windows checkout.
+*           text=auto eol=lf
+*.sh        text eol=lf
+*.kdl       text eol=lf
+*.jsonc     text eol=lf
+*.css       text eol=lf
+*.ini       text eol=lf
+*.conf      text eol=lf
+*.toml      text eol=lf
+*.md        text eol=lf
+*.hook      text eol=lf
+.gitignore  text eol=lf
+.gitattributes text eol=lf

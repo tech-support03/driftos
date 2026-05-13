@@ -1,0 +1,20 @@
+# ~/.config/kanshi/config (personal profile)
+# Personal 3-monitor topology. Connector names are best-guesses — run
+# `niri msg outputs` (or `wlr-randr`) on the target machine and edit if needed.
+
+profile personal-3mon {
+    output DP-1     mode 2560x1440@180Hz position 0,1440    scale 1 enable
+    output DP-2     mode 2560x1440@60Hz  position 0,0       scale 1 enable
+    output HDMI-A-1 mode 1920x1080@60Hz  position 2560,1440 scale 1 enable
+}
+
+# Two-monitor fallback (e.g. middle DP cable unplugged).
+profile two-mon {
+    output DP-1     mode 2560x1440@180Hz position 0,0    scale 1 enable
+    output HDMI-A-1 mode 1920x1080@60Hz  position 2560,0 scale 1 enable
+}
+
+# Laptop-only / single monitor fallback.
+profile single {
+    output DP-1 mode 2560x1440@180Hz position 0,0 scale 1 enable
+}

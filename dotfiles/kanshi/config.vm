@@ -1,0 +1,8 @@
+# ~/.config/kanshi/config (VM profile)
+# Generic single-viewport fallback. VM outputs vary wildly (Virtual-1, X11-1,
+# HEADLESS-1...) so we use a wildcard match: kanshi applies the first profile
+# whose outputs all match. The wildcard profile is last-resort.
+
+profile virtual-single-1080 {
+    output * mode 1920x1080@60Hz position 0,0 scale 1 enable
+}

@@ -1,0 +1,116 @@
+// ~/.config/waybar-side/config.jsonc
+// Vertical translucent side bar pinned to the LEFT edge.
+//
+// =====  USER-EDITABLE PINNED-APP DOCK  =====
+//   To add/remove/edit pinned apps, modify ONLY the "modules-center" array
+//   below: each entry must correspond to a "custom/pin-<name>" block whose
+//   `on-click` launches the executable and whose `format` is the icon glyph.
+//
+{
+    "name": "waybar-side",
+    "layer": "top",
+    "position": "left",
+    "width": 52,
+    "spacing": 0,
+    "margin": 0,
+    "exclusive": true,
+
+    "modules-left": [
+        "custom/archlogo",
+        "niri/workspaces",
+        "niri/window"
+    ],
+    "modules-center": [
+        "custom/pin-chrome",
+        "custom/pin-spotify",
+        "custom/pin-terminal",
+        "custom/pin-discord",
+        "custom/pin-whatsapp",
+        "custom/pin-steam",
+        "custom/launcher"
+    ],
+    "modules-right": [
+        "custom/sysmon-cpu",
+        "custom/sysmon-gpu",
+        "custom/sysmon-mem",
+        "clock",
+        "custom/quick-settings",
+        "custom/power"
+    ],
+
+    // -------- TOP -----------------------------------------------------------
+    "custom/archlogo": {
+        "format": "",
+        "tooltip": false,
+        "on-click": "fastfetch-popup"
+    },
+    "niri/workspaces": {
+        "format": "{icon}",
+        "format-icons": {
+            "active":  "",
+            "default": ""
+        }
+    },
+    "niri/window": {
+        "format": "{app_id_icon}",
+        "max-length": 1,
+        "tooltip-format": "{title}",
+        "rewrite": {}
+    },
+
+    // -------- DOCK (edit freely; add a "custom/pin-foo" block below to match) -
+    "custom/pin-chrome":   { "format": "", "tooltip": "Chrome",   "on-click": "google-chrome-stable" },
+    "custom/pin-spotify":  { "format": "", "tooltip": "Spotify",  "on-click": "spotify" },
+    "custom/pin-terminal": { "format": "", "tooltip": "Terminal", "on-click": "foot" },
+    "custom/pin-discord":  { "format": "", "tooltip": "Discord",  "on-click": "discord" },
+    "custom/pin-whatsapp": { "format": "", "tooltip": "WhatsApp", "on-click": "whatsapp-for-linux 2>/dev/null || xdg-open https://web.whatsapp.com" },
+    "custom/pin-steam":    { "format": "", "tooltip": "Steam",    "on-click": "steam" },
+
+    "custom/launcher": {
+        "format": "",
+        "tooltip": "App launcher",
+        "on-click": "fuzzel"
+    },
+
+    // -------- SYSTEM MONITOR (icon-only; hover for details) ----------------
+    "custom/sysmon-cpu": {
+        "exec": "$HOME/.local/bin/sysmon-cpu",
+        "interval": 2,
+        "format": "{}",
+        "return-type": "json",
+        "on-click": "foot -e btop"
+    },
+    "custom/sysmon-gpu": {
+        "exec": "$HOME/.local/bin/sysmon-gpu",
+        "interval": 2,
+        "format": "{}",
+        "return-type": "json",
+        "on-click": "foot -e nvtop 2>/dev/null || foot -e radeontop 2>/dev/null || foot -e btop"
+    },
+    "custom/sysmon-mem": {
+        "exec": "$HOME/.local/bin/sysmon-mem",
+        "interval": 2,
+        "format": "{}",
+        "return-type": "json",
+        "on-click": "foot -e btop"
+    },
+
+    "clock": {
+        "format": "{:%H\n%M}",
+        "tooltip-format": "<tt>{calendar}</tt>"
+    },
+
+    "custom/quick-settings": {
+        "format": "",
+        "tooltip": "Quick settings (Wi-Fi · Bluetooth · Audio)",
+        "on-click": "pavucontrol &",
+        "on-click-right": "blueman-manager &",
+        "on-click-middle": "nm-connection-editor &"
+    },
+
+    "custom/power": {
+        "format": "",
+        "tooltip": "Power menu",
+        "on-click": "power-menu"
+    }
+}

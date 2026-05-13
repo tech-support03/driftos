@@ -1,0 +1,239 @@
+// ~/.config/niri/config.kdl
+// Niri Wayland compositor — driftos.
+// PROFILE-AWARE: both `personal` and `vm` monitor blocks are present;
+//                Niri ignores `output` blocks that don't match a connected name,
+//                so the same file is valid on both targets.
+
+input {
+    keyboard {
+        xkb {
+            layout "us"
+        }
+        repeat-delay 250
+        repeat-rate 35
+    }
+    touchpad {
+        tap
+        natural-scroll
+        accel-profile "adaptive"
+    }
+    mouse {
+        accel-profile "flat"
+    }
+    focus-follows-mouse max-scroll-amount="0%"
+    workspace-auto-back-and-forth
+}
+
+// =============================================================================
+//  OUTPUTS — personal (3-monitor) topology. Adjust connector names if needed.
+//  Names like DP-1/HDMI-A-1 vary per driver; run `niri msg outputs` to discover.
+// =============================================================================
+output "DP-1" {
+    // Monitor 1 — bottom center primary, 2560x1440 @ 180Hz
+    mode "2560x1440@179.998"
+    position x=0 y=1440
+    scale 1.0
+    variable-refresh-rate
+}
+
+output "DP-2" {
+    // Monitor 2 — top stacked, 2560x1440 @ 60Hz
+    mode "2560x1440@59.951"
+    position x=0 y=0
+    scale 1.0
+}
+
+output "HDMI-A-1" {
+    // Monitor 3 — right side, 1920x1080 @ 60Hz
+    mode "1920x1080@60.000"
+    position x=2560 y=1440
+    scale 1.0
+}
+
+// =============================================================================
+//  OUTPUTS — VM fallback. Virtio/QXL/virtual outputs frequently show up as
+//  Virtual-1, Virtual-2, or simply as XWAYLAND/HEADLESS. Map them safely.
+// =============================================================================
+output "Virtual-1" {
+    mode "1920x1080@60.000"
+    position x=0 y=0
+    scale 1.0
+}
+output "Virtual-2" {
+    off
+}
+
+// =============================================================================
+//  Layout, gaps, focus ring (borderless).
+// =============================================================================
+layout {
+    gaps 10
+    center-focused-column "never"
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        proportion 1.0
+    }
+    default-column-width { proportion 0.5; }
+
+    focus-ring {
+        // Borderless = off; use shadows instead.
+        off
+    }
+    border {
+        off
+    }
+    shadow {
+        on
+        softness 30
+        spread 8
+        offset x=0 y=4
+        color "#00000088"
+    }
+
+    struts {
+        // Side bar reserves 56px on the left; top bar floats with no exclusive zone.
+        left   56
+        right  0
+        top    0
+        bottom 0
+    }
+}
+
+// =============================================================================
+//  Animations — fluid, hardware-accelerated.
+// =============================================================================
+animations {
+    slowdown 1.0
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+    window-open {
+        duration-ms 200
+        curve "ease-out-expo"
+    }
+    window-close {
+        duration-ms 150
+        curve "ease-out-quad"
+    }
+    config-notification-open-close { off; }
+}
+
+// =============================================================================
+//  Window rules — borderless, rounded, with translucency for terminals & dialogs.
+// =============================================================================
+window-rule {
+    geometry-corner-radius 14
+    clip-to-geometry true
+}
+
+window-rule {
+    match app-id="foot"
+    opacity 0.92
+}
+window-rule {
+    match app-id="fuzzel"
+    opacity 0.95
+    geometry-corner-radius 18
+}
+window-rule {
+    match app-id="org.gnome.Calculator"
+    opacity 0.95
+}
+// Side bar / top bar — never give them focus rings or shadows.
+layer-rule {
+    match namespace="^waybar-side$"
+    place-within-backdrop false
+    shadow { off; }
+}
+layer-rule {
+    match namespace="^waybar-top$"
+    place-within-backdrop false
+    shadow { off; }
+}
+
+// =============================================================================
+//  Autostart — wallpaper, bars, idle/lock daemon, notifications, clipboard.
+// =============================================================================
+spawn-at-startup "wallpaper-init"
+spawn-at-startup "sh" "-c" "pkill -x waybar; waybar -c ~/.config/waybar-top/config.jsonc    -s ~/.config/waybar-top/style.css    & disown"
+spawn-at-startup "sh" "-c" "waybar -c ~/.config/waybar-side/config.jsonc -s ~/.config/waybar-side/style.css   & disown"
+spawn-at-startup "mako"
+spawn-at-startup "wl-paste" "--type" "text"  "--watch" "cliphist" "store"
+spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
+spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
+spawn-at-startup "sh" "-c" "swayidle -w timeout 300 'swaylock -f' timeout 600 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors' before-sleep 'swaylock -f' & disown"
+
+// =============================================================================
+//  Keybindings — macOS/ChromeOS-flavored.
+// =============================================================================
+binds {
+    Mod+Return         { spawn "foot"; }
+    Mod+Space          { spawn "fuzzel"; }
+    Mod+Shift+Q        { close-window; }
+    Mod+L              { spawn "swaylock"; }
+    Mod+Shift+E        { spawn "power-menu"; }
+
+    Mod+Left           { focus-column-left; }
+    Mod+Right          { focus-column-right; }
+    Mod+Up             { focus-window-up; }
+    Mod+Down           { focus-window-down; }
+
+    Mod+Shift+Left     { move-column-left; }
+    Mod+Shift+Right    { move-column-right; }
+    Mod+Shift+Up       { move-window-up; }
+    Mod+Shift+Down     { move-window-down; }
+
+    Mod+1 { focus-workspace 1; }
+    Mod+2 { focus-workspace 2; }
+    Mod+3 { focus-workspace 3; }
+    Mod+4 { focus-workspace 4; }
+    Mod+5 { focus-workspace 5; }
+    Mod+6 { focus-workspace 6; }
+    Mod+7 { focus-workspace 7; }
+    Mod+8 { focus-workspace 8; }
+    Mod+9 { focus-workspace 9; }
+
+    Mod+Shift+1 { move-column-to-workspace 1; }
+    Mod+Shift+2 { move-column-to-workspace 2; }
+    Mod+Shift+3 { move-column-to-workspace 3; }
+
+    Mod+F              { maximize-column; }
+    Mod+Shift+F        { fullscreen-window; }
+    Mod+R              { reset-window-height; }
+
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
+    XF86AudioMute         allow-when-locked=true { spawn "wpctl" "set-mute"   "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    XF86AudioPlay         allow-when-locked=true { spawn "playerctl" "play-pause"; }
+    XF86AudioNext         allow-when-locked=true { spawn "playerctl" "next"; }
+    XF86AudioPrev         allow-when-locked=true { spawn "playerctl" "previous"; }
+    XF86MonBrightnessUp   { spawn "brightnessctl" "set" "+5%"; }
+    XF86MonBrightnessDown { spawn "brightnessctl" "set" "5%-"; }
+
+    Print              { spawn "grimblast" "copy" "area"; }
+    Mod+Print          { spawn "grimblast" "copysave" "area"; }
+}
+
+environment {
+    QT_QPA_PLATFORM       "wayland"
+    GDK_BACKEND           "wayland,x11"
+    MOZ_ENABLE_WAYLAND    "1"
+    XDG_CURRENT_DESKTOP   "niri"
+    XDG_SESSION_TYPE      "wayland"
+}
+
+cursor {
+    xcursor-theme "Adwaita"
+    xcursor-size 24
+}
+
+screenshot-path "~/Pictures/Screenshots/%Y-%m-%d %H-%M-%S.png"
+
+hotkey-overlay {
+    skip-at-startup
+}

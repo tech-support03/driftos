@@ -1,0 +1,194 @@
+#!/usr/bin/env bash
+# ~/arch-setup/bootstrap.sh
+# Bare-metal Arch installer — meant to be run from inside the Arch ISO live
+# environment as root. Partitions a target disk, pacstraps a minimal base,
+# configures it inside arch-chroot, and installs the bootloader (GRUB or
+# Limine+sbctl). After reboot, the user runs `~/arch-setup/install.sh` to
+# layer on the Niri rice.
+#
+# Usage (all flags optional; missing values are prompted):
+#   sudo ./bootstrap.sh \
+#       --disk /dev/nvme0n1 \
+#       --hostname driftos \
+#       --user arjun \
+#       --timezone America/New_York \
+#       --profile personal \
+#       --secure-boot \
+#       --yes                  # skip the "destroy disk" confirmation
+#
+# Environment-variable equivalents:
+#   DISK, HOSTNAME, USERNAME, TIMEZONE, PROFILE, SECURE_BOOT, ASSUME_YES,
+#   USER_PASSWORD, ROOT_PASSWORD
+#
+set -Eeuo pipefail
+shopt -s inherit_errexit
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+STAGE_DIR="$ROOT_DIR/iso-stage"
+MODULES_DIR="$ROOT_DIR/modules"
+DOTFILES_DIR="$ROOT_DIR/dotfiles"
+SCRIPTS_DIR="$ROOT_DIR/scripts"
+
+export ROOT_DIR STAGE_DIR MODULES_DIR DOTFILES_DIR SCRIPTS_DIR
+
+# ---- defaults / args -------------------------------------------------------
+DISK="${DISK:-}"
+HOSTNAME="${HOSTNAME:-driftos}"
+USERNAME="${USERNAME:-}"
+TIMEZONE="${TIMEZONE:-America/New_York}"
+LOCALE="${LOCALE:-en_US.UTF-8}"
+KEYMAP="${KEYMAP:-us}"
+PROFILE="${PROFILE:-vm}"
+SECURE_BOOT="${SECURE_BOOT:-false}"
+ASSUME_YES="${ASSUME_YES:-false}"
+USER_PASSWORD="${USER_PASSWORD:-}"
+ROOT_PASSWORD="${ROOT_PASSWORD:-}"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --disk)         DISK="$2"; shift 2 ;;
+        --hostname)     HOSTNAME="$2"; shift 2 ;;
+        --user)         USERNAME="$2"; shift 2 ;;
+        --timezone)     TIMEZONE="$2"; shift 2 ;;
+        --locale)       LOCALE="$2"; shift 2 ;;
+        --keymap)       KEYMAP="$2"; shift 2 ;;
+        --profile)      PROFILE="$2"; shift 2 ;;
+        --secure-boot)  SECURE_BOOT="true"; shift ;;
+        --no-secure-boot) SECURE_BOOT="false"; shift ;;
+        --yes|-y)       ASSUME_YES="true"; shift ;;
+        -h|--help)      sed -n '2,25p' "$0"; exit 0 ;;
+        *) echo "Unknown arg: $1" >&2; exit 2 ;;
+    esac
+done
+
+[[ "$PROFILE" == "vm" || "$PROFILE" == "personal" ]] || {
+    echo "PROFILE must be 'vm' or 'personal'"; exit 2;
+}
+
+# ---- color helpers (re-exported so stage scripts inherit) ------------------
+c_red()   { printf '\033[1;31m%s\033[0m\n' "$*"; }
+c_green() { printf '\033[1;32m%s\033[0m\n' "$*"; }
+c_blue()  { printf '\033[1;34m%s\033[0m\n' "$*"; }
+c_yellow(){ printf '\033[1;33m%s\033[0m\n' "$*"; }
+c_dim()   { printf '\033[2m%s\033[0m\n' "$*"; }
+log()  { c_blue ">>> $*"; }
+ok()   { c_green "  ok  $*"; }
+warn() { c_yellow "  !!  $*"; }
+die()  { c_red    "  XX  $*"; exit 1; }
+export -f c_red c_green c_blue c_yellow c_dim log ok warn die
+
+trap 'warn "Failed at line $LINENO: $BASH_COMMAND"' ERR
+
+# ---- preconditions ---------------------------------------------------------
+[[ $EUID -eq 0 ]] || die "bootstrap.sh must run as root (you are inside the Arch ISO)."
+
+source "$STAGE_DIR/01-preflight.sh"
+
+# ---- prompt for any missing values ----------------------------------------
+prompt_default() {
+    local var="$1" prompt="$2" default="$3"
+    local current="${!var}"
+    if [[ -z "$current" ]]; then
+        read -r -p "$prompt [$default]: " val < /dev/tty || true
+        printf -v "$var" '%s' "${val:-$default}"
+    fi
+}
+prompt_password() {
+    local var="$1" prompt="$2"
+    local p1 p2
+    while [[ -z "${!var}" ]]; do
+        read -r -s -p "$prompt: " p1 < /dev/tty; echo
+        read -r -s -p "Confirm: "  p2 < /dev/tty; echo
+        [[ "$p1" == "$p2" && -n "$p1" ]] || { warn "passwords didn't match or empty, retry"; continue; }
+        printf -v "$var" '%s' "$p1"
+    done
+}
+
+if [[ -z "$DISK" ]]; then
+    log "Available block devices:"
+    lsblk -dpno NAME,SIZE,MODEL | grep -Ev 'loop|sr0|rom' || true
+    prompt_default DISK "Target disk (will be ERASED)" "/dev/sda"
+fi
+[[ -b "$DISK" ]] || die "Disk $DISK does not exist."
+
+prompt_default USERNAME "Username" "arjun"
+prompt_default HOSTNAME "Hostname" "driftos"
+prompt_default TIMEZONE "Timezone (e.g. America/New_York)" "$TIMEZONE"
+
+prompt_password USER_PASSWORD "Password for $USERNAME"
+prompt_password ROOT_PASSWORD "Password for root"
+
+export DISK HOSTNAME USERNAME TIMEZONE LOCALE KEYMAP PROFILE SECURE_BOOT USER_PASSWORD ROOT_PASSWORD ASSUME_YES
+
+# ---- summary + confirmation -----------------------------------------------
+c_yellow ""
+c_yellow "═══════════════════════════════════════════════════════════"
+c_yellow "  About to DESTROY all data on $DISK and install Arch."
+c_yellow "═══════════════════════════════════════════════════════════"
+c_dim    "  Disk:           $DISK"
+c_dim    "  Hostname:       $HOSTNAME"
+c_dim    "  User:           $USERNAME"
+c_dim    "  Timezone:       $TIMEZONE"
+c_dim    "  Locale:         $LOCALE"
+c_dim    "  Profile:        $PROFILE"
+c_dim    "  Bootloader:     $([[ "$SECURE_BOOT" == "true" ]] && echo 'Limine + sbctl (Secure Boot)' || echo 'GRUB')"
+c_yellow ""
+if [[ "$ASSUME_YES" != "true" ]]; then
+    read -r -p "Type ERASE to continue, anything else to abort: " ack < /dev/tty || true
+    [[ "$ack" == "ERASE" ]] || die "aborted by user"
+fi
+
+# ---- run stages -----------------------------------------------------------
+bash "$STAGE_DIR/02-disk.sh"
+bash "$STAGE_DIR/03-pacstrap.sh"
+
+# Copy this entire repo into the new system under the user's homedir, so the
+# rice install.sh is available immediately after first boot.
+log "Copying arch-setup tree into /mnt/home/$USERNAME/arch-setup"
+install -d -m 0755 "/mnt/home/$USERNAME"
+cp -a "$ROOT_DIR/." "/mnt/home/$USERNAME/arch-setup/"
+# chown is applied inside chroot once the user exists.
+
+# Hand off the in-chroot script through arch-chroot.
+log "Entering arch-chroot for system configuration"
+install -Dm755 "$STAGE_DIR/04-chroot-config.sh"     "/mnt/root/04-chroot-config.sh"
+install -Dm755 "$STAGE_DIR/05-bootloader-chroot.sh" "/mnt/root/05-bootloader-chroot.sh"
+# Modules + dotfiles already inside /mnt/home/$USER/arch-setup, but the
+# bootloader modules need to be reachable from /root too:
+install -Dm755 "$MODULES_DIR/05-bootloader-grub.sh"   "/mnt/root/modules/05-bootloader-grub.sh"
+install -Dm755 "$MODULES_DIR/06-bootloader-limine.sh" "/mnt/root/modules/06-bootloader-limine.sh"
+
+arch-chroot /mnt /bin/bash -lc "
+    set -Eeuo pipefail
+    export HOSTNAME='$HOSTNAME' USERNAME='$USERNAME' TIMEZONE='$TIMEZONE' \
+           LOCALE='$LOCALE' KEYMAP='$KEYMAP' PROFILE='$PROFILE' \
+           SECURE_BOOT='$SECURE_BOOT' \
+           USER_PASSWORD='$USER_PASSWORD' ROOT_PASSWORD='$ROOT_PASSWORD' \
+           IS_CHROOT=1 MODULES_DIR=/root/modules
+    bash /root/04-chroot-config.sh
+    bash /root/05-bootloader-chroot.sh
+    rm -f /root/04-chroot-config.sh /root/05-bootloader-chroot.sh
+    rm -rf /root/modules
+"
+
+# ---- finalize -------------------------------------------------------------
+log "Syncing and unmounting"
+sync
+umount -R /mnt || warn "some mounts didn't unmount cleanly; check manually"
+
+c_green ""
+c_green "═══════════════════════════════════════════════════════════════════"
+c_green "  Base Arch is installed."
+c_green "═══════════════════════════════════════════════════════════════════"
+c_dim    "  Next steps:"
+c_dim    "    1. reboot   (then remove the install media)"
+c_dim    "    2. log in as $USERNAME on tty"
+if [[ "$SECURE_BOOT" == "true" ]]; then
+c_yellow "    3. (Secure Boot) enter UEFI firmware setup. If sbctl reported"
+c_yellow "       that keys could not be enrolled (firmware not in Setup Mode),"
+c_yellow "       clear/remove the platform key in firmware first, reboot, then"
+c_yellow "       run:    sudo sb-finalize"
+c_yellow "       After that, re-enable Secure Boot in firmware."
+fi
+c_dim    "    $([[ "$SECURE_BOOT" == "true" ]] && echo 4 || echo 3). cd ~/arch-setup && ./install.sh --profile $PROFILE"
+c_green ""

@@ -1,0 +1,8 @@
+# Downloaded wallpapers (re-fetched by modules/09-wallpapers.sh on install).
+wallpapers/*
+!wallpapers/.gitkeep
+
+# Editor / OS junk
+.DS_Store
+*.swp
+*~

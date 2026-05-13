@@ -1,0 +1,70 @@
+// ~/.config/waybar-top/config.jsonc
+// Top bar — invisible by default. When media plays, only the centered
+// waveform widget is visible; on hover the full bar fades in.
+{
+    "name": "waybar-top",
+    "layer": "top",
+    "position": "top",
+    "height": 36,
+    "spacing": 0,
+    "margin-top": 0,
+    "margin-bottom": 0,
+    "exclusive": false,
+    "passthrough": false,
+
+    "modules-left":   ["clock", "custom/calendar"],
+    "modules-center": ["custom/waveform"],
+    "modules-right":  ["custom/media", "custom/weather", "custom/notifications"],
+
+    "clock": {
+        "interval": 30,
+        "format": "{:%H:%M  ·  %a %d %b}",
+        "format-alt": "{:%A, %d %B %Y  %H:%M:%S}",
+        "tooltip-format": "<tt>{calendar}</tt>",
+        "on-click": "fuzzel --dmenu < /dev/null & gnome-calendar &"
+    },
+
+    "custom/calendar": {
+        "format": "",
+        "tooltip": false,
+        "on-click": "gnome-calendar 2>/dev/null || fuzzel --dmenu --prompt='date  ' < /dev/null"
+    },
+
+    "custom/waveform": {
+        // Streams cava bars from a long-running helper. Empty output when no
+        // media is playing → entire center cell collapses to 0 width.
+        "exec": "$HOME/.local/bin/waveform",
+        "format": "{}",
+        "return-type": "json",
+        "tooltip": false,
+        "escape": true
+    },
+
+    "custom/media": {
+        "exec": "$HOME/.local/bin/media-status",
+        "return-type": "json",
+        "interval": 1,
+        "format": "{}",
+        "on-click":         "playerctl play-pause",
+        "on-click-right":   "playerctl next",
+        "on-click-middle":  "playerctl previous",
+        "tooltip": true,
+        "escape": true,
+        "max-length": 60
+    },
+
+    "custom/weather": {
+        // wttr.in formatted line; failures collapse silently.
+        "exec": "curl -fsS --max-time 3 'https://wttr.in/?format=%c+%t' 2>/dev/null | head -n1 || true",
+        "interval": 900,
+        "format": "{}",
+        "tooltip": false
+    },
+
+    "custom/notifications": {
+        "format": "",
+        "tooltip-format": "Notifications",
+        "on-click": "makoctl history && makoctl dismiss --all",
+        "on-click-right": "makoctl menu"
+    }
+}
