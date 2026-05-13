@@ -166,7 +166,11 @@ spawn-at-startup "mako"
 spawn-at-startup "wl-paste" "--type" "text"  "--watch" "cliphist" "store"
 spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
-spawn-at-startup "sh" "-c" "swayidle -w timeout 300 'swaylock -f' timeout 600 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors' before-sleep 'swaylock -f' & disown"
+spawn-at-startup "xwayland-satellite"
+// swayidle: 30 min until lock, 35 min until display off. Longer than the
+// default 5 min so first-boot debugging doesn't get interrupted by the
+// (effects-heavy) lock screen. Reduce here if you want it tighter.
+spawn-at-startup "sh" "-c" "swayidle -w timeout 1800 'swaylock -f' timeout 2100 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors' before-sleep 'swaylock -f' & disown"
 
 // =============================================================================
 //  Keybindings — macOS/ChromeOS-flavored.

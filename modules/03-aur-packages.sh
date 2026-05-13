@@ -26,8 +26,13 @@ AUR_PKGS=(
     grimblast-git
     hyprpicker
     wlr-randr
+    xwayland-satellite
+    # Graphical greeter stack: regreet (GTK4) inside a cage kiosk compositor,
+    # both wired up through greetd. Replaces tuigreet so the login screen
+    # actually matches the rest of the rice.
     greetd
-    greetd-tuigreet
+    regreet
+    cage
 )
 
 log "Installing AUR packages with yay (this may take a while)"

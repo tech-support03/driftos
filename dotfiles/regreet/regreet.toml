@@ -1,0 +1,29 @@
+# /etc/greetd/regreet.toml — driftos login screen
+# Matches the rice aesthetic: dark, translucent, lavender accent.
+
+[background]
+# A wallpaper path that always exists is supplied by 09-wallpapers.sh.
+# Override with your own file if you like; "Cover" keeps aspect ratio.
+path = "/var/lib/regreet/wallpaper.jpg"
+fit = "Cover"
+
+[GTK]
+application_prefer_dark_theme = true
+cursor_theme_name = "Adwaita"
+font_name = "Inter 11"
+icon_theme_name = "Papirus-Dark"
+theme_name = "adw-gtk3-dark"
+
+[appearance]
+greeting_msg = "  driftos"
+
+[commands]
+reboot   = ["systemctl", "reboot"]
+poweroff = ["systemctl", "poweroff"]
+
+# `last` and `regular` change session-button behavior.
+[file]
+# Persist the last-logged-in user and last-used session so they pre-fill.
+log_level = "info"
+log_path  = "/var/log/regreet.log"
+cache_path = "/var/cache/regreet/cache.toml"

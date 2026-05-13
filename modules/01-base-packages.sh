@@ -14,7 +14,7 @@ PKGS_CORE=(
     fastfetch htop btop fzf ripgrep fd bat eza zoxide
     foot
     ttf-jetbrains-mono-nerd ttf-firacode-nerd noto-fonts noto-fonts-emoji
-    noto-fonts-cjk papirus-icon-theme
+    noto-fonts-cjk papirus-icon-theme adw-gtk-theme
     python python-pip python-gobject
     gtk3 gtk4 libadwaita
     cava
@@ -22,7 +22,19 @@ PKGS_CORE=(
     fuzzel
     swaybg
     seatd
+    # GPU stack — required for Niri to find a working EGL renderer.
+    # In a VMware/QEMU VM you ALSO need to enable 3D acceleration in the
+    # hypervisor settings; the packages alone aren't enough.
+    mesa vulkan-icd-loader vulkan-swrast
+    xorg-xwayland
 )
+
+# Detect VM hypervisor and pull in guest tools for clipboard/resolution/3D.
+case "$(systemd-detect-virt 2>/dev/null)" in
+    vmware) PKGS_CORE+=( open-vm-tools gtkmm3 ) ;;
+    kvm|qemu) PKGS_CORE+=( qemu-guest-agent spice-vdagent ) ;;
+    oracle) PKGS_CORE+=( virtualbox-guest-utils ) ;;
+esac
 
 # Conditional: GPU/CPU microcode only matters bare-metal.
 PKGS_BAREMETAL=(

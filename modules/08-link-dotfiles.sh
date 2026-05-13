@@ -32,6 +32,13 @@ link "$DOTFILES_DIR/cava/config"                "$HOME/.config/cava/config"
 link "$DOTFILES_DIR/fastfetch/config.jsonc"     "$HOME/.config/fastfetch/config.jsonc"
 link "$DOTFILES_DIR/swaylock/config"            "$HOME/.config/swaylock/config"
 
+# Regreet runs as the `greeter` user, so its config must live under
+# /etc/greetd, not the user's home. Copy (not symlink) so the greeter user
+# can read it without traversing the user's homedir.
+log "Installing regreet config to /etc/greetd"
+sudo install -Dm644 "$DOTFILES_DIR/regreet/regreet.toml" /etc/greetd/regreet.toml
+sudo install -Dm644 "$DOTFILES_DIR/regreet/regreet.css"  /etc/greetd/regreet.css
+
 # Scripts → ~/.local/bin (in PATH for most shells via XDG)
 mkdir -p "$HOME/.local/bin"
 for s in "$SCRIPTS_DIR"/*.sh; do

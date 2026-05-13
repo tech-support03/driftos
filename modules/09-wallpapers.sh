@@ -26,4 +26,13 @@ done
 # Drop a wallpaper rotation/init script the niri config calls at startup.
 install -Dm755 "$SCRIPTS_DIR/wallpaper-init.sh" "$HOME/.local/bin/wallpaper-init"
 
+# Seed regreet's login-screen wallpaper from whichever was downloaded first.
+# Falls back silently if every download failed (e.g. no network on first run).
+first_wp="$(find "$WP_DIR" -maxdepth 1 -type f \
+    \( -iname '*.jpg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | sort | head -n1)"
+if [[ -n "$first_wp" ]]; then
+    sudo install -Dm644 "$first_wp" /var/lib/regreet/wallpaper.jpg
+    ok "regreet login wallpaper seeded from $(basename "$first_wp")"
+fi
+
 ok "wallpapers staged at $WP_DIR"
