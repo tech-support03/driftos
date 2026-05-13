@@ -27,7 +27,7 @@ iwctl
 
 # get the repo
 pacman -Sy --noconfirm git
-git clone https://github.com/<you>/arch-setup.git ~/arch-setup
+git clone https://github.com/tech-support03/driftos.git ~/arch-setup
 cd ~/arch-setup
 
 # bare-metal install (interactive — will prompt for disk/user/passwords)
