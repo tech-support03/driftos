@@ -47,6 +47,10 @@ TARGET_TYPE="${TARGET_TYPE:-auto}"        # ssd | usb | auto
 SECURE_BOOT="${SECURE_BOOT:-false}"
 ASSUME_YES="${ASSUME_YES:-false}"
 FORCE_USB_SECURE_BOOT="${FORCE_USB_SECURE_BOOT:-false}"
+# Dual-boot guard: if the target disk looks like it has Windows on it, refuse
+# unless the user explicitly overrides. Prevents the single most common
+# mistake (typing /dev/sda when you meant /dev/nvme1n1 on a dual-boot box).
+FORCE_OVERWRITE_WINDOWS="${FORCE_OVERWRITE_WINDOWS:-false}"
 USER_PASSWORD="${USER_PASSWORD:-}"
 ROOT_PASSWORD="${ROOT_PASSWORD:-}"
 
@@ -63,6 +67,7 @@ while [[ $# -gt 0 ]]; do
         --secure-boot)  SECURE_BOOT="true"; shift ;;
         --no-secure-boot) SECURE_BOOT="false"; shift ;;
         --force-usb-secure-boot) FORCE_USB_SECURE_BOOT="true"; shift ;;
+        --i-know-this-is-windows) FORCE_OVERWRITE_WINDOWS="true"; shift ;;
         --yes|-y)       ASSUME_YES="true"; shift ;;
         -h|--help)      sed -n '2,28p' "$0"; exit 0 ;;
         *) echo "Unknown arg: $1" >&2; exit 2 ;;
@@ -148,6 +153,77 @@ if [[ "$TARGET_TYPE" == "usb" && "$SECURE_BOOT" == "true" && "$FORCE_USB_SECURE_
     SECURE_BOOT="false"
 fi
 
+# ---- Dual-boot safety: detect Windows on the target disk -------------------
+# Run BEFORE the destroy confirmation. Scans for NTFS/exfat partitions, a
+# Microsoft EFI loader directory on any FAT32 partition, and "Microsoft basic
+# data" GPT type GUIDs. If any of those are present, the user almost certainly
+# pointed us at the wrong disk on a dual-boot machine.
+disk_looks_like_windows() {
+    local d="$1" reasons=()
+
+    # 1) NTFS or exfat filesystem signatures on any partition of this disk.
+    local fstypes
+    fstypes="$(lsblk -nrpo NAME,FSTYPE "$d" 2>/dev/null | awk 'NR>1 {print $2}' | tr '\n' ' ')"
+    if grep -qiE '\b(ntfs|exfat)\b' <<<"$fstypes"; then
+        reasons+=("NTFS/exfat partition present")
+    fi
+
+    # 2) Microsoft loader on an EFI partition. Mount each FAT32 partition
+    #    read-only briefly and look for \EFI\Microsoft\Boot\bootmgfw.efi.
+    local p
+    for p in $(lsblk -nrpo NAME,FSTYPE "$d" 2>/dev/null | awk '$2=="vfat"{print $1}'); do
+        local mnt; mnt="$(mktemp -d)"
+        if mount -o ro "$p" "$mnt" 2>/dev/null; then
+            if [[ -f "$mnt/EFI/Microsoft/Boot/bootmgfw.efi" ]] || \
+               [[ -d "$mnt/EFI/Microsoft" ]]; then
+                reasons+=("Microsoft EFI loader on $p")
+            fi
+            umount "$mnt" 2>/dev/null || true
+        fi
+        rmdir "$mnt" 2>/dev/null || true
+    done
+
+    # 3) GPT partition type GUIDs that Windows uses.
+    if command -v sgdisk >/dev/null 2>&1; then
+        local gpt
+        gpt="$(sgdisk -p "$d" 2>/dev/null | tr '[:upper:]' '[:lower:]')"
+        if grep -qE 'microsoft (basic data|reserved|recovery)' <<<"$gpt"; then
+            reasons+=("Microsoft GPT partition type on $d")
+        fi
+    fi
+
+    if ((${#reasons[@]} > 0)); then
+        printf '%s\n' "${reasons[@]}"
+        return 0
+    fi
+    return 1
+}
+
+windows_evidence="$(disk_looks_like_windows "$DISK" || true)"
+if [[ -n "$windows_evidence" ]]; then
+    c_red ""
+    c_red "═══════════════════════════════════════════════════════════"
+    c_red "  STOP: $DISK looks like a WINDOWS disk."
+    c_red "═══════════════════════════════════════════════════════════"
+    while IFS= read -r line; do c_red "    • $line"; done <<<"$windows_evidence"
+    c_yellow ""
+    c_yellow "  This is almost certainly NOT the disk you want to install onto."
+    c_yellow "  On dual-boot machines, you want the OTHER SSD (the empty one,"
+    c_yellow "  or your existing Linux disk). All disks visible right now:"
+    c_yellow ""
+    lsblk -dpno NAME,SIZE,MODEL,TRAN,REM | grep -Ev 'loop|sr0|rom' || true
+    c_yellow ""
+    if [[ "$FORCE_OVERWRITE_WINDOWS" != "true" ]]; then
+        die "Refusing to wipe $DISK. Re-run with the correct --disk, or pass --i-know-this-is-windows to override."
+    fi
+    warn "FORCE_OVERWRITE_WINDOWS=true — proceeding to ERASE Windows on $DISK."
+fi
+
+# ---- "Other disks" preview — show what will NOT be touched -----------------
+# On a dual-boot machine this is the most reassuring line: every other SSD
+# in the box is listed explicitly as untouched.
+other_disks="$(lsblk -dpno NAME,SIZE,MODEL,TRAN | grep -Ev 'loop|sr0|rom' | awk -v d="$DISK" '$1!=d {print}')"
+
 prompt_default TARGET_USERNAME "Username" "arjun"
 prompt_default TARGET_HOSTNAME "Hostname" "driftos"
 prompt_default TIMEZONE "Timezone (e.g. America/New_York)" "$TIMEZONE"
@@ -173,6 +249,11 @@ c_dim    "  Timezone:       $TIMEZONE"
 c_dim    "  Locale:         $LOCALE"
 c_dim    "  Profile:        $PROFILE"
 c_dim    "  Bootloader:     $([[ "$SECURE_BOOT" == "true" ]] && echo 'Limine + sbctl (Secure Boot)' || echo "GRUB$([[ "$TARGET_TYPE" == "usb" ]] && echo ' (--removable, portable)')")"
+if [[ -n "$other_disks" ]]; then
+c_green ""
+c_green "  These disks will NOT be touched (data preserved):"
+while IFS= read -r line; do c_dim    "    • $line"; done <<<"$other_disks"
+fi
 c_yellow ""
 if [[ "$ASSUME_YES" != "true" ]]; then
     read -r -p "Type ERASE to continue, anything else to abort: " ack < /dev/tty || true

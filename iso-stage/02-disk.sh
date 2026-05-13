@@ -10,6 +10,17 @@ set -Eeuo pipefail
 [[ -n "${DISK:-}" ]] || die "DISK not set"
 [[ -b "$DISK" ]]      || die "DISK $DISK not a block device"
 
+# Hard safety: refuse if $DISK is the disk the live ISO booted from. This is
+# only physically possible in odd setups (writing to the same USB the ISO is
+# running off), but the failure mode is catastrophic, so we check.
+iso_src="$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null || true)"
+if [[ -n "$iso_src" ]]; then
+    iso_disk="/dev/$(lsblk -no PKNAME "$iso_src" 2>/dev/null | head -n1)"
+    if [[ "$iso_disk" == "$DISK" ]]; then
+        die "Refusing to install onto $DISK — the live ISO is running from it."
+    fi
+fi
+
 # Safety: refuse if any partition on the target is currently mounted.
 if mount | grep -qE "^${DISK}p?[0-9]+ "; then
     warn "Unmounting existing partitions on $DISK"
