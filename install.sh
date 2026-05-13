@@ -26,16 +26,30 @@ WALLPAPERS_DIR="$ROOT_DIR/wallpapers"
 export ROOT_DIR MODULES_DIR DOTFILES_DIR SCRIPTS_DIR WALLPAPERS_DIR
 
 # ---- ISO-environment detection: forward to bootstrap.sh --------------------
-if grep -q archiso /proc/cmdline 2>/dev/null || [[ -d /run/archiso ]]; then
+# Multiple checks because /proc/cmdline can be missing the "archiso" token on
+# some boot configurations and /run/archiso isn't guaranteed either. The
+# rootfs filesystem type is the most reliable: archiso uses overlayfs over
+# squashfs, installed systems use ext4/btrfs/etc.
+is_archiso() {
+    grep -q archiso /proc/cmdline 2>/dev/null && return 0
+    [[ -d /run/archiso ]] && return 0
+    [[ -f /run/archiso/bootmnt/arch/version ]] && return 0
+    [[ "$(findmnt -no FSTYPE / 2>/dev/null)" == "overlay" ]] && return 0
+    return 1
+}
+if is_archiso; then
     exec bash "$ROOT_DIR/bootstrap.sh" "$@"
 fi
 
 PROFILE="${PROFILE:-vm}"
+NEW_HOSTNAME=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --profile) PROFILE="$2"; shift 2 ;;
-        --profile=*) PROFILE="${1#*=}"; shift ;;
+        --profile)    PROFILE="$2"; shift 2 ;;
+        --profile=*)  PROFILE="${1#*=}"; shift ;;
+        --hostname)   NEW_HOSTNAME="$2"; shift 2 ;;
+        --hostname=*) NEW_HOSTNAME="${1#*=}"; shift ;;
         --secure-boot|--no-secure-boot)
             echo "Note: --secure-boot is a bootstrap-time flag and is ignored in rice mode." ;
             shift ;;
@@ -70,6 +84,27 @@ command -v sudo >/dev/null || { warn "sudo is required"; exit 1; }
 sudo -v
 
 log "Rice mode — Profile: $PROFILE"
+
+# ---- Optional: rename the host now (handy if bootstrap saved a bad default) -
+if [[ -n "$NEW_HOSTNAME" ]]; then
+    log "Setting hostname → $NEW_HOSTNAME"
+    echo "$NEW_HOSTNAME" | sudo tee /etc/hostname >/dev/null
+    sudo sed -i -E "s/127\.0\.1\.1\s.*/127.0.1.1   ${NEW_HOSTNAME}.localdomain $NEW_HOSTNAME/" /etc/hosts || \
+        echo "127.0.1.1   ${NEW_HOSTNAME}.localdomain $NEW_HOSTNAME" | sudo tee -a /etc/hosts >/dev/null
+    sudo hostnamectl set-hostname "$NEW_HOSTNAME" 2>/dev/null || true
+    ok "hostname updated (takes full effect next login)"
+fi
+
+# ---- Defensive: heal $HOME ownership + ~/.gnupg before any AUR work --------
+# Some installations end up with a home directory that the user can't write
+# to (useradd -m race, manual chroot edits, etc.). yay's gpg key-import step
+# fails with "can't create directory '$HOME/.gnupg': Permission denied" in
+# that case. This block is idempotent and fast.
+if [[ ! -O "$HOME" ]] || [[ ! -w "$HOME" ]]; then
+    warn "$HOME is not writable by $(whoami); fixing ownership"
+    sudo chown -R "$(id -u):$(id -g)" "$HOME"
+fi
+install -d -m 0700 "$HOME/.gnupg"
 
 run_mod() {
     local m="$1"

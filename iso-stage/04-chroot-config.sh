@@ -15,8 +15,8 @@ ok()   { printf '\033[1;32m  ok\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m  !!\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m  XX\033[0m %s\n' "$*"; exit 1; }
 
-: "${HOSTNAME:?missing}"
-: "${USERNAME:?missing}"
+: "${TARGET_HOSTNAME:?missing}"
+: "${TARGET_USERNAME:?missing}"
 : "${TIMEZONE:?missing}"
 : "${LOCALE:?missing}"
 : "${KEYMAP:?missing}"
@@ -36,12 +36,12 @@ printf 'LANG=%s\n' "$LOCALE" > /etc/locale.conf
 printf 'KEYMAP=%s\n' "$KEYMAP" > /etc/vconsole.conf
 
 # ---- hostname --------------------------------------------------------------
-log "Hostname → $HOSTNAME"
-printf '%s\n' "$HOSTNAME" > /etc/hostname
+log "Hostname → $TARGET_HOSTNAME"
+printf '%s\n' "$TARGET_HOSTNAME" > /etc/hostname
 cat > /etc/hosts <<EOF
 127.0.0.1   localhost
 ::1         localhost
-127.0.1.1   $HOSTNAME.localdomain $HOSTNAME
+127.0.1.1   $TARGET_HOSTNAME.localdomain $TARGET_HOSTNAME
 EOF
 
 # ---- root password ---------------------------------------------------------
@@ -49,11 +49,19 @@ log "Setting root password"
 printf 'root:%s' "$ROOT_PASSWORD" | chpasswd
 
 # ---- user account ----------------------------------------------------------
-log "Creating user $USERNAME"
-if ! id "$USERNAME" >/dev/null 2>&1; then
-    useradd -m -G wheel,audio,video,input,storage,optical -s /bin/bash "$USERNAME"
+log "Creating user $TARGET_USERNAME"
+if ! id "$TARGET_USERNAME" >/dev/null 2>&1; then
+    useradd -m -G wheel,audio,video,input,storage,optical -s /bin/bash "$TARGET_USERNAME"
 fi
-printf '%s:%s' "$USERNAME" "$USER_PASSWORD" | chpasswd
+# Defensive: make absolutely sure the home directory exists with correct
+# ownership and permissions. Without this, yay's gpg key-import step later
+# can fail with "can't create directory '/home/<user>/.gnupg': Permission
+# denied" if useradd's -m didn't materialize the homedir correctly.
+install -d -m 0755 -o "$TARGET_USERNAME" -g "$TARGET_USERNAME" "/home/$TARGET_USERNAME"
+chown -R "$TARGET_USERNAME:$TARGET_USERNAME" "/home/$TARGET_USERNAME"
+install -d -m 0700 -o "$TARGET_USERNAME" -g "$TARGET_USERNAME" "/home/$TARGET_USERNAME/.gnupg"
+
+printf '%s:%s' "$TARGET_USERNAME" "$USER_PASSWORD" | chpasswd
 
 # Wheel → sudo. Use a drop-in so we don't depend on sudoers.tmpl variations.
 install -Dm440 /dev/stdin /etc/sudoers.d/10-wheel <<'EOF'
@@ -74,8 +82,8 @@ log "Regenerating initramfs"
 mkinitcpio -P
 
 # ---- ownership of the staged repo ------------------------------------------
-if [[ -d "/home/$USERNAME/arch-setup" ]]; then
-    chown -R "$USERNAME:$USERNAME" "/home/$USERNAME/arch-setup"
+if [[ -d "/home/$TARGET_USERNAME/arch-setup" ]]; then
+    chown -R "$TARGET_USERNAME:$TARGET_USERNAME" "/home/$TARGET_USERNAME/arch-setup"
 fi
 
 # ---- first-login hint ------------------------------------------------------

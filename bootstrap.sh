@@ -32,9 +32,13 @@ SCRIPTS_DIR="$ROOT_DIR/scripts"
 export ROOT_DIR STAGE_DIR MODULES_DIR DOTFILES_DIR SCRIPTS_DIR
 
 # ---- defaults / args -------------------------------------------------------
+# NB: do NOT name these `HOSTNAME` or `USER` — bash auto-populates those from
+# the running shell's identity, so `${HOSTNAME:-driftos}` would read "archiso"
+# from the live ISO and silently skip every default/prompt. Use TARGET_* names
+# to keep the live-env environment out of our config.
 DISK="${DISK:-}"
-HOSTNAME="${HOSTNAME:-driftos}"
-USERNAME="${USERNAME:-}"
+TARGET_HOSTNAME="${TARGET_HOSTNAME:-}"
+TARGET_USERNAME="${TARGET_USERNAME:-}"
 TIMEZONE="${TIMEZONE:-America/New_York}"
 LOCALE="${LOCALE:-en_US.UTF-8}"
 KEYMAP="${KEYMAP:-us}"
@@ -47,8 +51,8 @@ ROOT_PASSWORD="${ROOT_PASSWORD:-}"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --disk)         DISK="$2"; shift 2 ;;
-        --hostname)     HOSTNAME="$2"; shift 2 ;;
-        --user)         USERNAME="$2"; shift 2 ;;
+        --hostname)     TARGET_HOSTNAME="$2"; shift 2 ;;
+        --user)         TARGET_USERNAME="$2"; shift 2 ;;
         --timezone)     TIMEZONE="$2"; shift 2 ;;
         --locale)       LOCALE="$2"; shift 2 ;;
         --keymap)       KEYMAP="$2"; shift 2 ;;
@@ -56,7 +60,7 @@ while [[ $# -gt 0 ]]; do
         --secure-boot)  SECURE_BOOT="true"; shift ;;
         --no-secure-boot) SECURE_BOOT="false"; shift ;;
         --yes|-y)       ASSUME_YES="true"; shift ;;
-        -h|--help)      sed -n '2,25p' "$0"; exit 0 ;;
+        -h|--help)      sed -n '2,28p' "$0"; exit 0 ;;
         *) echo "Unknown arg: $1" >&2; exit 2 ;;
     esac
 done
@@ -111,14 +115,14 @@ if [[ -z "$DISK" ]]; then
 fi
 [[ -b "$DISK" ]] || die "Disk $DISK does not exist."
 
-prompt_default USERNAME "Username" "arjun"
-prompt_default HOSTNAME "Hostname" "driftos"
+prompt_default TARGET_USERNAME "Username" "arjun"
+prompt_default TARGET_HOSTNAME "Hostname" "driftos"
 prompt_default TIMEZONE "Timezone (e.g. America/New_York)" "$TIMEZONE"
 
-prompt_password USER_PASSWORD "Password for $USERNAME"
+prompt_password USER_PASSWORD "Password for $TARGET_USERNAME"
 prompt_password ROOT_PASSWORD "Password for root"
 
-export DISK HOSTNAME USERNAME TIMEZONE LOCALE KEYMAP PROFILE SECURE_BOOT USER_PASSWORD ROOT_PASSWORD ASSUME_YES
+export DISK TARGET_HOSTNAME TARGET_USERNAME TIMEZONE LOCALE KEYMAP PROFILE SECURE_BOOT USER_PASSWORD ROOT_PASSWORD ASSUME_YES
 
 # ---- summary + confirmation -----------------------------------------------
 c_yellow ""
@@ -126,8 +130,8 @@ c_yellow "═══════════════════════�
 c_yellow "  About to DESTROY all data on $DISK and install Arch."
 c_yellow "═══════════════════════════════════════════════════════════"
 c_dim    "  Disk:           $DISK"
-c_dim    "  Hostname:       $HOSTNAME"
-c_dim    "  User:           $USERNAME"
+c_dim    "  Hostname:       $TARGET_HOSTNAME"
+c_dim    "  User:           $TARGET_USERNAME"
 c_dim    "  Timezone:       $TIMEZONE"
 c_dim    "  Locale:         $LOCALE"
 c_dim    "  Profile:        $PROFILE"
@@ -144,25 +148,23 @@ bash "$STAGE_DIR/03-pacstrap.sh"
 
 # Copy this entire repo into the new system under the user's homedir, so the
 # rice install.sh is available immediately after first boot.
-log "Copying arch-setup tree into /mnt/home/$USERNAME/arch-setup"
-install -d -m 0755 "/mnt/home/$USERNAME"
-cp -a "$ROOT_DIR/." "/mnt/home/$USERNAME/arch-setup/"
+log "Copying arch-setup tree into /mnt/home/$TARGET_USERNAME/arch-setup"
+install -d -m 0755 "/mnt/home/$TARGET_USERNAME"
+cp -a "$ROOT_DIR/." "/mnt/home/$TARGET_USERNAME/arch-setup/"
 # chown is applied inside chroot once the user exists.
 
 # Hand off the in-chroot script through arch-chroot.
 log "Entering arch-chroot for system configuration"
 install -Dm755 "$STAGE_DIR/04-chroot-config.sh"     "/mnt/root/04-chroot-config.sh"
 install -Dm755 "$STAGE_DIR/05-bootloader-chroot.sh" "/mnt/root/05-bootloader-chroot.sh"
-# Modules + dotfiles already inside /mnt/home/$USER/arch-setup, but the
-# bootloader modules need to be reachable from /root too:
 install -Dm755 "$MODULES_DIR/05-bootloader-grub.sh"   "/mnt/root/modules/05-bootloader-grub.sh"
 install -Dm755 "$MODULES_DIR/06-bootloader-limine.sh" "/mnt/root/modules/06-bootloader-limine.sh"
 
 arch-chroot /mnt /bin/bash -lc "
     set -Eeuo pipefail
-    export HOSTNAME='$HOSTNAME' USERNAME='$USERNAME' TIMEZONE='$TIMEZONE' \
-           LOCALE='$LOCALE' KEYMAP='$KEYMAP' PROFILE='$PROFILE' \
-           SECURE_BOOT='$SECURE_BOOT' \
+    export TARGET_HOSTNAME='$TARGET_HOSTNAME' TARGET_USERNAME='$TARGET_USERNAME' \
+           TIMEZONE='$TIMEZONE' LOCALE='$LOCALE' KEYMAP='$KEYMAP' \
+           PROFILE='$PROFILE' SECURE_BOOT='$SECURE_BOOT' \
            USER_PASSWORD='$USER_PASSWORD' ROOT_PASSWORD='$ROOT_PASSWORD' \
            IS_CHROOT=1 MODULES_DIR=/root/modules
     bash /root/04-chroot-config.sh
@@ -182,7 +184,7 @@ c_green "  Base Arch is installed."
 c_green "═══════════════════════════════════════════════════════════════════"
 c_dim    "  Next steps:"
 c_dim    "    1. reboot   (then remove the install media)"
-c_dim    "    2. log in as $USERNAME on tty"
+c_dim    "    2. log in as $TARGET_USERNAME on tty"
 if [[ "$SECURE_BOOT" == "true" ]]; then
 c_yellow "    3. (Secure Boot) enter UEFI firmware setup. If sbctl reported"
 c_yellow "       that keys could not be enrolled (firmware not in Setup Mode),"
