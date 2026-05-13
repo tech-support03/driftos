@@ -25,7 +25,9 @@ PKGS_CORE=(
     # GPU stack — required for Niri to find a working EGL renderer.
     # In a VMware/QEMU VM you ALSO need to enable 3D acceleration in the
     # hypervisor settings; the packages alone aren't enough.
-    mesa mesa-utils egl-utils vulkan-icd-loader vulkan-swrast
+    # mesa-demos provides BOTH glxinfo and eglinfo on Arch (the package
+    # names mesa-utils / egl-utils are Debian, not Arch).
+    mesa mesa-demos vulkan-icd-loader vulkan-swrast
     xorg-xwayland
     # ImageMagick — pre-blurs the lock-screen background at install time so
     # swaylock doesn't need live GL effects to look riced.
