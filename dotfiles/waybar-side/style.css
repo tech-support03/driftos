@@ -72,7 +72,9 @@ window#waybar.waybar-side {
 #custom-sysmon-cpu     { color: #fb7185; }
 #custom-sysmon-gpu     { color: #c084fc; }
 #custom-sysmon-mem     { color: #34d399; }
-#clock                 { color: #e5e7eb; font-size: 9pt; line-height: 1.05; padding: 6px 0; }
+/* line-height is web CSS — not in GTK4's subset. Use padding to tighten the
+   stacked HH/MM lines instead. */
+#clock                 { color: #e5e7eb; font-size: 9pt; padding: 3px 0; }
 #custom-quick-settings { color: #60a5fa; }
 #custom-power          { color: #f43f5e; padding-bottom: 12px; }
 
