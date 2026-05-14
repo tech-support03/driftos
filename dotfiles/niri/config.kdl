@@ -68,21 +68,21 @@ output "Virtual-2" {
 //  bare "eDP" or "LVDS-1"). Niri ignores output blocks for connectors that
 //  don't exist on the machine, so leaving these here is safe everywhere.
 //
-//  `mode "preferred"` defers to the panel's preferred mode (EDID), which is
-//  the right call for laptops where the resolution and refresh rate vary.
+//  No `mode` line → niri uses the panel's EDID-preferred mode, which is the
+//  right call for laptops where resolution + refresh rate vary by hardware.
+//  (Niri's parser does NOT accept `mode "preferred"`; only WIDTHxHEIGHT[@RATE]
+//  strings are valid, so omitting the line is how you ask for "whatever EDID
+//  says.")
 // =============================================================================
 output "eDP-1" {
-    mode "preferred"
     position x=0 y=0
     scale 1.0
 }
 output "eDP" {
-    mode "preferred"
     position x=0 y=0
     scale 1.0
 }
 output "LVDS-1" {
-    mode "preferred"
     position x=0 y=0
     scale 1.0
 }

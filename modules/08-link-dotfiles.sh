@@ -47,4 +47,22 @@ for s in "$SCRIPTS_DIR"/*.sh; do
     ok "installed script: ${name%.sh}"
 done
 
+# Fail loudly if the linked niri config doesn't parse on the installed niri
+# version. Without this, parse errors only surface when the user logs in via
+# greetd, which then bounces them straight back to the greeter — a confusing
+# loop to debug from a cold install.
+if command -v niri >/dev/null 2>&1; then
+    log "Validating niri config against installed niri"
+    # `niri validate` (no args) reads the user's default config location, which
+    # is the symlink we just placed at ~/.config/niri/config.kdl. Long-form
+    # --config is supported on all niri versions; -c is not.
+    if ! niri validate >/tmp/niri-validate.log 2>&1; then
+        warn "niri config failed to validate:"
+        sed 's/^/    /' /tmp/niri-validate.log
+        warn "Fix dotfiles/niri/config.kdl and re-run install.sh."
+        exit 1
+    fi
+    ok "niri config validates"
+fi
+
 ok "dotfiles linked"
