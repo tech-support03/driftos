@@ -39,11 +39,17 @@ log "Installing regreet config to /etc/greetd"
 sudo install -Dm644 "$DOTFILES_DIR/regreet/regreet.toml" /etc/greetd/regreet.toml
 sudo install -Dm644 "$DOTFILES_DIR/regreet/regreet.css"  /etc/greetd/regreet.css
 
-# Scripts → ~/.local/bin (in PATH for most shells via XDG)
+# Scripts → both ~/.local/bin (interactive shell) AND /usr/local/bin (every
+# PAM/systemd session). niri's spawn-at-startup uses bare names like
+# `wallpaper-init` and `power-menu`; those resolve via the session PATH which
+# greetd/login(1) bootstraps from /etc/profile, and that path does NOT
+# include ~/.local/bin on Arch. Installing to /usr/local/bin (which IS in
+# the default PATH) means niri can always find them.
 mkdir -p "$HOME/.local/bin"
 for s in "$SCRIPTS_DIR"/*.sh; do
     name="$(basename "$s")"
     install -m755 "$s" "$HOME/.local/bin/${name%.sh}"
+    sudo install -m755 "$s" "/usr/local/bin/${name%.sh}"
     ok "installed script: ${name%.sh}"
 done
 
