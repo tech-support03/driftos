@@ -64,12 +64,24 @@ fi
 partprobe "$DISK"
 sleep 1
 
-# Resolve partition names (NVMe / mmcblk / USB-NVMe use ${DISK}p1, SATA sda1).
-if [[ "$DISK" =~ (nvme|mmcblk|loop)[0-9]+$ ]]; then
+# Resolve partition names. Kernel rule: if the device node ends in a digit
+# (nvme0n1, mmcblk0, loop0, ...) partitions get a `p` separator; otherwise
+# (sda, vda, ...) they don't. The previous (nvme|mmcblk|loop)[0-9]+$ regex
+# failed on NVMe namespaces like nvme0n1 — it doesn't end in nvme<digit>, it
+# ends in n<digit> — so we landed on /dev/nvme0n11 / /dev/nvme0n12.
+if [[ "$DISK" =~ [0-9]$ ]]; then
     P1="${DISK}p1"; P2="${DISK}p2"
 else
     P1="${DISK}1";  P2="${DISK}2"
 fi
+
+# partprobe is async on some kernels; wait briefly for udev to materialize the
+# nodes before failing.
+for _ in 1 2 3 4 5; do
+    [[ -b "$P1" && -b "$P2" ]] && break
+    udevadm settle 2>/dev/null || true
+    sleep 1
+done
 [[ -b "$P1" && -b "$P2" ]] || die "expected partitions $P1 $P2 not present after partprobe"
 
 log "Formatting"
