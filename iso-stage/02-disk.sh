@@ -37,18 +37,26 @@ partprobe "$DISK" || true
 sleep 1
 
 # USB sticks live longer with fewer writes and don't reliably honor TRIM, so
-# pick smaller ESP and write-cheap mount options. SSDs get a 1G ESP, async
-# discard, and weekly fstrim. TARGET_TYPE is set by bootstrap.sh.
+# pick smaller ESP and write-cheap mount options. SSDs get a 1G ESP and weekly
+# fstrim (enabled in chroot config). TARGET_TYPE is set by bootstrap.sh.
+#
+# NOTE on TRIM: ext4 does NOT accept `discard=async` (that's btrfs syntax — the
+# kernel now strict-parses and fails the mount). The valid ext4 forms are bare
+# `discard` (synchronous TRIM at delete time, measurably slow) or none. We
+# choose none + fstrim.timer for batched weekly TRIM, which is the modern
+# Arch-wiki recommendation for ext4-on-SSD.
 case "${TARGET_TYPE:-ssd}" in
     usb)
         ESP_SIZE="+512M"
-        ROOT_OPTS="defaults,noatime,nodiratime,commit=120"
-        ESP_OPTS="defaults,noatime,umask=0077,fmask=0077,dmask=0077"
+        # noatime already disables diratime; commit=120 batches metadata flushes
+        # to spare USB flash write cycles.
+        ROOT_OPTS="defaults,noatime,commit=120"
+        ESP_OPTS="defaults,noatime,fmask=0077,dmask=0077"
         ;;
     *)
         ESP_SIZE="+1G"
-        ROOT_OPTS="defaults,noatime,discard=async"
-        ESP_OPTS="defaults,noatime,umask=0077,fmask=0077,dmask=0077"
+        ROOT_OPTS="defaults,noatime"
+        ESP_OPTS="defaults,noatime,fmask=0077,dmask=0077"
         ;;
 esac
 
@@ -62,7 +70,7 @@ else
     sgdisk -n 2:0:0         -t 2:8300 -c 2:"Linux Root"        "$DISK"
 fi
 partprobe "$DISK"
-sleep 1
+udevadm settle 2>/dev/null || sleep 1
 
 # Resolve partition names. Kernel rule: if the device node ends in a digit
 # (nvme0n1, mmcblk0, loop0, ...) partitions get a `p` separator; otherwise
