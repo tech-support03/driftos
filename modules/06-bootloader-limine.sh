@@ -19,8 +19,14 @@ if [[ ! -d /sys/firmware/efi ]]; then
 fi
 
 log "Installing Limine + sbctl + helpers"
-# sbctl is in extra; b3sum is its own package. limine + efibootmgr in extra.
-sudo pacman -S --needed --noconfirm limine efibootmgr sbctl b3sum
+# limine + efibootmgr + sbctl are in extra. BLAKE2B hashing uses b2sum from
+# coreutils (always present) — Limine wants BLAKE2B, not BLAKE3.
+sudo pacman -S --needed --noconfirm efibootmgr sbctl
+# Force-reinstall limine on every run so /usr/share/limine/BOOTX64.EFI is the
+# pristine package copy. A prior run that sbctl-signed it in place leaves the
+# binary with an embedded signature; enroll-config later invalidates that
+# signature, and sbctl then refuses to re-sign with 'incorrect digest'.
+sudo pacman -S --noconfirm limine
 
 ESP="${ESP:-/boot}"
 if ! mountpoint -q "$ESP"; then
@@ -69,19 +75,13 @@ else
     warn "and run: sudo sb-finalize"
 fi
 
-# Sign critical EFI binaries.
-for f in \
-    "$ESP/EFI/BOOT/BOOTX64.EFI" \
-    "$ESP/EFI/limine/BOOTX64.EFI" \
-    /usr/share/limine/BOOTX64.EFI; do
-    [[ -f "$f" ]] && sudo sbctl sign -s "$f" || true
-done
-for k in "$ESP"/vmlinuz-* "$ESP"/initramfs-*.img; do
-    [[ -f "$k" ]] && sudo sbctl sign -s "$k" || true
-done
-
-# ---- limine.conf with BLAKE2B hashes --------------------------------------
-log "Generating /boot/limine.conf with BLAKE2B hashes"
+# ---- limine.conf with BLAKE2B-hashed paths --------------------------------
+# Limine 12.x .conf format: entries open with '/', and per-file integrity is a
+# BLAKE2B hash appended to the path ('boot():/file#<hash>'). Under Secure Boot
+# with an enrolled config checksum, every path MUST carry a hash or Limine
+# panics. b2sum (coreutils) produces the BLAKE2B-512 digest Limine expects.
+log "Generating $ESP/limine.conf with BLAKE2B-hashed paths"
+ROOT_UUID="$(findmnt -no UUID /)"
 TMP="$(mktemp)"
 {
     echo "timeout: 2"
@@ -94,23 +94,37 @@ TMP="$(mktemp)"
         flavour="${kernel#vmlinuz-}"
         initramfs="initramfs-${flavour}.img"
         [[ -f "$ESP/$initramfs" ]] || initramfs="initramfs-${flavour}-fallback.img"
-        kern_hash="$(sudo b3sum "$vmlinuz" | awk '{print $1}')"
-        init_hash="$(sudo b3sum "$ESP/$initramfs" | awk '{print $1}')"
-        ROOT_UUID="$(findmnt -no UUID /)"
+        kern_hash="$(sudo b2sum "$vmlinuz" | awk '{print $1}')"
+        init_hash="$(sudo b2sum "$ESP/$initramfs" | awk '{print $1}')"
         cat <<ENTRY
-:Arch Linux ($flavour)
+/Arch Linux ($flavour)
     protocol: linux
-    kernel_path: boot():/$kernel
+    kernel_path: boot():/$kernel#$kern_hash
     kernel_cmdline: root=UUID=$ROOT_UUID rw quiet loglevel=3
-    module_path: boot():/$initramfs
-    kernel_b3sum: $kern_hash
-    module_b3sum: $init_hash
+    module_path: boot():/$initramfs#$init_hash
 
 ENTRY
     done
 } > "$TMP"
 sudo install -Dm644 "$TMP" "$ESP/limine.conf"
 rm -f "$TMP"
+
+# ---- Enroll config checksum, then sign ------------------------------------
+# Limine only enforces Secure Boot hardening when the config's BLAKE2B checksum
+# is baked into its EFI executable. enroll-config rewrites the binary, so it
+# MUST run before sbctl signs it. The ESP's \EFI\BOOT\BOOTX64.EFI is the binary
+# the firmware actually loads (see the NVRAM entry created above).
+CONF_HASH="$(sudo b2sum "$ESP/limine.conf" | awk '{print $1}')"
+log "Enrolling limine.conf checksum into Limine and signing"
+for efi in "$ESP/EFI/BOOT/BOOTX64.EFI" "$ESP/EFI/limine/BOOTX64.EFI"; do
+    [[ -f "$efi" ]] || continue
+    sudo limine enroll-config "$efi" "$CONF_HASH" --quiet
+    # Drop any prior db entry for this path so sbctl signs from a clean slate.
+    # Without this, sbctl can refuse with 'incorrect digest' if the binary was
+    # previously signed and has since been modified (e.g. by enroll-config).
+    sudo sbctl remove-file "$efi" 2>/dev/null || true
+    sudo sbctl sign -s "$efi"
+done
 
 # ---- pacman + mkinitcpio hooks --------------------------------------------
 log "Installing pacman hooks for re-sign + re-enroll on kernel/bootloader updates"
@@ -134,12 +148,19 @@ EOF
 
 sudo install -Dm755 /dev/stdin /usr/local/bin/limine-resign <<'EOF'
 #!/usr/bin/env bash
+# Runs as root from the pacman hook. Order matters: rewrite limine.conf first
+# (fresh BLAKE2B path hashes), THEN re-enroll its checksum into the Limine EFI
+# binary, THEN sbctl-sign it. A stale enrolled checksum panics under Secure Boot.
 set -e
 ESP="$(mountpoint -q /boot && echo /boot || (mountpoint -q /efi && echo /efi || echo /boot/efi))"
-for f in "$ESP"/vmlinuz-* "$ESP"/initramfs-*.img "$ESP"/EFI/BOOT/BOOTX64.EFI "$ESP"/EFI/limine/BOOTX64.EFI; do
-    [[ -f "$f" ]] && sbctl sign -s "$f" || true
-done
 "$(dirname "$0")/limine-regen-conf" "$ESP"
+CONF_HASH="$(b2sum "$ESP/limine.conf" | awk '{print $1}')"
+for efi in "$ESP/EFI/BOOT/BOOTX64.EFI" "$ESP/EFI/limine/BOOTX64.EFI"; do
+    [[ -f "$efi" ]] || continue
+    limine enroll-config "$efi" "$CONF_HASH" --quiet
+    sbctl remove-file "$efi" 2>/dev/null || true
+    sbctl sign -s "$efi"
+done
 EOF
 
 sudo install -Dm755 /dev/stdin /usr/local/bin/limine-regen-conf <<'EOF'
@@ -159,16 +180,14 @@ TMP="$(mktemp)"
         flavour="${kernel#vmlinuz-}"
         initramfs="initramfs-${flavour}.img"
         [[ -f "$ESP/$initramfs" ]] || initramfs="initramfs-${flavour}-fallback.img"
-        kern_hash="$(b3sum "$vmlinuz" | awk '{print $1}')"
-        init_hash="$(b3sum "$ESP/$initramfs" | awk '{print $1}')"
+        kern_hash="$(b2sum "$vmlinuz" | awk '{print $1}')"
+        init_hash="$(b2sum "$ESP/$initramfs" | awk '{print $1}')"
         cat <<E
-:Arch Linux ($flavour)
+/Arch Linux ($flavour)
     protocol: linux
-    kernel_path: boot():/$kernel
+    kernel_path: boot():/$kernel#$kern_hash
     kernel_cmdline: root=UUID=$ROOT_UUID rw quiet loglevel=3
-    module_path: boot():/$initramfs
-    kernel_b3sum: $kern_hash
-    module_b3sum: $init_hash
+    module_path: boot():/$initramfs#$init_hash
 
 E
     done
