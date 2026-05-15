@@ -5,8 +5,8 @@
 */
 
 * {
-    font-family: "Symbols Nerd Font", "JetBrainsMono Nerd Font", "Inter";
-    font-size: 14pt;
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 18pt;
     min-height: 0;
     border: none;
     box-shadow: none;
@@ -30,17 +30,16 @@ window#waybar.waybar-side {
 /* Every module/icon — flat, no background box, just the glyph. */
 #custom-archlogo,
 #niri-workspaces button,
-#niri-window,
 #custom-pin-chrome, #custom-pin-spotify, #custom-pin-terminal,
 #custom-pin-discord, #custom-pin-whatsapp, #custom-pin-steam,
 #custom-launcher,
 #custom-sysmon-cpu, #custom-sysmon-gpu, #custom-sysmon-mem,
 #clock,
-#custom-quick-settings,
+#custom-volume,
 #custom-power {
     background: transparent;
-    padding: 8px 0;
-    margin: 2px 0;
+    padding: 10px 0;
+    margin: 3px 0;
     color: rgba(245, 246, 250, 0.85);
     border-radius: 12px;
     transition: color 160ms ease, background 160ms ease, transform 160ms ease;
@@ -54,7 +53,7 @@ window#waybar.waybar-side {
 #custom-launcher:hover,
 #custom-sysmon-cpu:hover, #custom-sysmon-gpu:hover, #custom-sysmon-mem:hover,
 #clock:hover,
-#custom-quick-settings:hover,
+#custom-volume:hover,
 #custom-power:hover {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.08);
@@ -74,9 +73,9 @@ window#waybar.waybar-side {
 #custom-sysmon-mem     { color: #34d399; }
 /* line-height is web CSS — not in GTK4's subset. Use padding to tighten the
    stacked HH/MM lines instead. */
-#clock                 { color: #e5e7eb; font-size: 9pt; padding: 3px 0; }
-#custom-quick-settings { color: #60a5fa; }
-#custom-power          { color: #f43f5e; padding-bottom: 12px; }
+#clock                 { color: #e5e7eb; font-size: 14pt; padding: 4px 0; }
+#custom-volume         { color: #60a5fa; }
+#custom-power          { color: #f43f5e; padding-bottom: 14px; }
 
 /* Active workspace pill. */
 #niri-workspaces button.active {

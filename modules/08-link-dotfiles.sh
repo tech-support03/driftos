@@ -20,9 +20,9 @@ link() {
 # Niri compositor
 link "$DOTFILES_DIR/niri/config.kdl"            "$HOME/.config/niri/config.kdl"
 
-# Waybar (top + side panel use separate config dirs, launched explicitly)
-link "$DOTFILES_DIR/waybar-top"                 "$HOME/.config/waybar-top"
+# Side panel = waybar; top bar = quickshell (Caelestia-style hover dashboard)
 link "$DOTFILES_DIR/waybar-side"                "$HOME/.config/waybar-side"
+link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
 # Side terminal, launcher, notifications, audio visualizer
 link "$DOTFILES_DIR/foot/foot.ini"              "$HOME/.config/foot/foot.ini"

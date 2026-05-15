@@ -11,4 +11,4 @@ tt+="\\nFree   ${free} MiB"
 tt+="\\nCached ${cached} MiB"
 tt+="\\nSwap   ${swap_used}"
 
-printf '{"text":"","tooltip":"%s","class":"pct-%d"}\n' "$tt" "$pct"
+printf '{"text":"󰘚","tooltip":"%s","class":"pct-%d"}\n' "$tt" "$pct"

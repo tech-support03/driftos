@@ -21,4 +21,4 @@ for hwmon in /sys/class/hwmon/hwmon*/temp1_input; do
 done
 
 tt="CPU  ${pct}%\\nFreq  ${freq_khz} MHz${temp:+\\nTemp  $temp}"
-printf '{"text":"","tooltip":"%s","class":"pct-%d"}\n' "$tt" "$pct"
+printf '{"text":"󰍛","tooltip":"%s","class":"pct-%d"}\n' "$tt" "$pct"

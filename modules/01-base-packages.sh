@@ -21,6 +21,12 @@ PKGS_CORE=(
     mako
     fuzzel
     swaybg
+    # Quickshell — QtQuick-based shell; drives the Caelestia-style top bar.
+    quickshell
+    # Side-bar dock apps that live in the official repos. spotify +
+    # whatsapp-for-linux are AUR (see 03-aur-packages.sh); steam needs the
+    # multilib repo enabled, so it is intentionally left out of the installer.
+    chromium discord
     seatd
     # GPU stack — required for Niri to find a working EGL renderer.
     # In a VMware/QEMU VM you ALSO need to enable 3D acceleration in the

@@ -33,6 +33,9 @@ AUR_PKGS=(
     greetd
     regreet
     cage
+    # Side-bar dock apps not in the official repos.
+    spotify
+    whatsapp-for-linux
 )
 
 log "Installing AUR packages with yay (this may take a while)"

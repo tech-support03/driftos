@@ -4,8 +4,8 @@ set -Eeuo pipefail
 
 status="$(playerctl status 2>/dev/null || echo "")"
 case "$status" in
-    Playing) glyph="" ;;
-    Paused)  glyph="" ;;
+    Playing) glyph="" ;;
+    Paused)  glyph="" ;;
     *)       printf '{"text":""}\n'; exit 0 ;;
 esac
 
