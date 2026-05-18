@@ -20,7 +20,7 @@ BASE_PKGS=(
 
 # Bootloader packages depend on the toggle.
 if [[ "$SECURE_BOOT" == "true" ]]; then
-    BASE_PKGS+=( limine efibootmgr sbctl b3sum )
+    BASE_PKGS+=( limine efibootmgr sbctl )
 else
     if [[ "$IS_UEFI" == "true" ]]; then
         BASE_PKGS+=( grub efibootmgr os-prober )

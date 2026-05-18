@@ -14,7 +14,7 @@ sudo() { "$@"; }
 export -f sudo
 
 # Hide `yay` from the Limine module's "extra packages" branch — yay won't run
-# as root, and we already pacstrapped its needs (sbctl, limine, b3sum).
+# as root, and we already pacstrapped its needs (sbctl, limine).
 yay() {
     warn "yay called inside chroot — substituting pacman for: $*"
     # strip yay-only flags

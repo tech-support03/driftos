@@ -174,7 +174,7 @@ The Limine path is the critical one to get right. Here's exactly what
 6. **Sign** every UEFI binary on the ESP: `BOOTX64.EFI` (both paths), all
    `vmlinuz-*`, all `initramfs-*.img`. Uses `sbctl sign -s` so the path is
    persisted in `/var/lib/sbctl/files.db` — future updates re-sign automatically.
-7. **Write `${ESP}/limine.conf`** with BLAKE2B (`b3sum`) hashes for every
+7. **Write `${ESP}/limine.conf`** with BLAKE2B (`b2sum`) hashes for every
    kernel/initramfs pair. Limine refuses to boot binaries that don't match.
 8. **Install pacman hook** at `/etc/pacman.d/hooks/95-limine-resign.hook` that
    triggers on `linux`/`linux-lts`/`linux-zen`/`linux-hardened`/`limine`/
