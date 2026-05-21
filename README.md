@@ -156,32 +156,49 @@ them via `boot():/`.
 The Limine path is the critical one to get right. Here's exactly what
 `iso-stage/05-bootloader-chroot.sh` does, in order:
 
-1. **Install Limine, efibootmgr, sbctl, b3sum** (pacstrapped earlier; this step
-   just runs the module).
-2. **Copy** `BOOTX64.EFI` into `$ESP/EFI/BOOT/` (the firmware fallback path —
-   always boots even if NVRAM is wiped) and into `$ESP/EFI/limine/`.
-3. **Register** a "Limine" boot entry via `efibootmgr` (parsed NVMe-aware:
-   `/dev/nvme0n1p1` → disk `/dev/nvme0n1`, part `1`). Failure here is a warning,
-   not fatal — the fallback path still boots.
-4. **Create sbctl keys** (`PK`, `KEK`, `db`) under `/var/lib/sbctl/keys/`. Always
+1. **Install Limine, efibootmgr, sbctl** (pacstrapped earlier; this step just
+   runs the module). BLAKE2B hashing uses `b2sum` from coreutils — Limine wants
+   BLAKE2B, not BLAKE3, so there's no `b3sum` dependency.
+2. **Install the on-target helpers** `/usr/local/bin/limine-regen-conf` and
+   `/usr/local/bin/limine-resign` first, so the initial build and every later
+   update run the exact same code path.
+3. **Create sbctl keys** (`PK`, `KEK`, `db`) under `/var/lib/sbctl/keys/`. Always
    succeeds; this is local key generation.
-5. **Enroll keys** with Microsoft certificates (`--microsoft`, preserves DBX
+4. **Enroll keys** with Microsoft certificates (`--microsoft`, preserves DBX
    revocations and OEM vendor keys). This **only works in firmware Setup Mode**.
    - If Setup Mode is **enabled** → enrolled into firmware NVRAM. Done.
    - If Setup Mode is **disabled** → script emits a warning, installs the
      `sb-finalize` retry helper, and continues. Keys are not enrolled yet, but
-     binaries are still signed below.
-6. **Sign** every UEFI binary on the ESP: `BOOTX64.EFI` (both paths), all
-   `vmlinuz-*`, all `initramfs-*.img`. Uses `sbctl sign -s` so the path is
-   persisted in `/var/lib/sbctl/files.db` — future updates re-sign automatically.
-7. **Write `${ESP}/limine.conf`** with BLAKE2B (`b2sum`) hashes for every
-   kernel/initramfs pair. Limine refuses to boot binaries that don't match.
-8. **Install pacman hook** at `/etc/pacman.d/hooks/95-limine-resign.hook` that
-   triggers on `linux`/`linux-lts`/`linux-zen`/`linux-hardened`/`limine`/
-   `systemd` package updates. It re-signs all assets and regenerates
-   `limine.conf` with fresh BLAKE2B hashes.
-9. **Install** `/usr/local/bin/sb-finalize` — a hand-runnable retry script for
-   the "firmware wasn't in Setup Mode" case.
+     binaries are still built and signed below.
+5. **Build the boot chain via `limine-resign`** (failure-safe). Everything is
+   staged on temp files and swapped into place only after all signing succeeds:
+   - `limine.conf` written with BLAKE2B (`b2sum`) hashes for every
+     kernel/initramfs pair.
+   - **Primary** `\EFI\BOOT\BOOTX64.EFI`: a pristine Limine copy with the
+     `limine.conf` checksum enrolled (`limine enroll-config`), then `sbctl`-signed.
+   - **Rescue** `\EFI\limine-rescue\BOOTX64.EFI`: a pristine Limine copy that is
+     `sbctl`-signed but has **no** enrolled checksum, so it boots regardless of
+     `limine.conf` and can recover a checksum mismatch without a USB.
+   Paths are recorded with `sbctl sign -s` (persisted in `/var/lib/sbctl/files.db`)
+   so future updates re-sign automatically.
+6. **Register NVRAM entries** via `efibootmgr` (parsed NVMe-aware:
+   `/dev/nvme0n1p1` → disk `/dev/nvme0n1`, part `1`): "Limine (rescue)" first,
+   then "Limine" so the primary stays the default in BootOrder. Failure here is a
+   warning, not fatal — the `\EFI\BOOT\BOOTX64.EFI` fallback path still boots.
+7. **Install pacman hook** at `/etc/pacman.d/hooks/95-limine-resign.hook` that
+   triggers on `linux`/`linux-lts`/`linux-zen`/`linux-hardened`/`mkinitcpio`/
+   `limine`/`systemd` updates and re-runs `limine-resign` (rebuild conf,
+   re-enroll checksum, re-sign primary + rescue) atomically.
+8. **Install** `/usr/local/bin/sb-finalize` — a hand-runnable retry script for
+   the "firmware wasn't in Setup Mode" case; it enrolls keys then calls
+   `limine-resign`.
+
+> **Recovering a `CHECKSUM MISMATCH FOR CONFIG FILE` panic:** pick **Limine
+> (rescue)** from the firmware boot menu (it ignores the enrolled checksum), boot
+> in, then run `sudo limine-resign` to re-sync the config and its checksum. If
+> the rescue entry is unavailable, boot the Arch ISO, `mount /dev/disk/by-label/ROOT
+> /mnt && mount /dev/disk/by-label/EFI /mnt/boot && arch-chroot /mnt`, then run
+> `limine-resign`.
 
 ### What you need to do manually
 

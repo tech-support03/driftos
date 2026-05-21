@@ -41,8 +41,8 @@ if [[ "${SECURE_BOOT:-false}" == "true" ]]; then
     log "Installing sb-finalize helper for post-boot key enrollment"
     install -Dm755 /dev/stdin /usr/local/bin/sb-finalize <<'EOF'
 #!/usr/bin/env bash
-# sb-finalize — retry sbctl key enrollment after putting firmware in Setup
-# Mode, then re-sign all kernel/bootloader binaries and refresh limine.conf.
+# sb-finalize — retry sbctl key enrollment after putting firmware in Setup Mode,
+# then rebuild + re-sign the whole Limine chain via limine-resign.
 set -Eeuo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "run as root: sudo sb-finalize" >&2; exit 1; }
@@ -61,16 +61,12 @@ sbctl create-keys || true
 echo ">>> enrolling keys (with Microsoft certs)"
 sbctl enroll-keys --microsoft --yes-this-might-brick-my-machine
 
-ESP="$(mountpoint -q /boot && echo /boot || (mountpoint -q /efi && echo /efi || echo /boot/efi))"
-echo ">>> signing kernel + initramfs + EFI binaries on $ESP"
-for f in "$ESP"/vmlinuz-* "$ESP"/initramfs-*.img \
-         "$ESP"/EFI/BOOT/BOOTX64.EFI "$ESP"/EFI/limine/BOOTX64.EFI \
-         /usr/share/limine/BOOTX64.EFI; do
-    [[ -f "$f" ]] && sbctl sign -s "$f" || true
-done
-
-echo ">>> regenerating limine.conf with BLAKE2B hashes"
-/usr/local/bin/limine-regen-conf "$ESP"
+# Rebuild limine.conf, RE-ENROLL its checksum into the EFI binary, and re-sign
+# both the primary and rescue binaries. Doing the regen without the re-enroll
+# (the previous behaviour) left the binary's baked-in checksum stale and panicked
+# on the next boot — limine-resign keeps the pair in lockstep.
+echo ">>> rebuilding limine.conf + re-enrolling checksum + signing (primary + rescue)"
+/usr/local/bin/limine-resign
 
 echo "Done. Reboot and re-enable Secure Boot in firmware."
 EOF
