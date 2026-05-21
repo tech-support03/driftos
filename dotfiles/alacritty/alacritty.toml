@@ -7,6 +7,7 @@ size = 11.0
 [window]
 padding = { x = 12, y = 10 }
 opacity = 0.88
+decorations = "None"
 
 [cursor]
 style = { shape = "Beam", blinking = "On" }

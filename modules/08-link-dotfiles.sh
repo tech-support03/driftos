@@ -44,6 +44,8 @@ link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
 # Side terminal, launcher, notifications, audio visualizer
 link "$DOTFILES_DIR/alacritty/alacritty.toml"   "$HOME/.config/alacritty/alacritty.toml"
+link "$DOTFILES_DIR/gtk-3.0/settings.ini"       "$HOME/.config/gtk-3.0/settings.ini"
+link "$DOTFILES_DIR/gtk-4.0/settings.ini"       "$HOME/.config/gtk-4.0/settings.ini"
 link "$DOTFILES_DIR/fuzzel/fuzzel.ini"          "$HOME/.config/fuzzel/fuzzel.ini"
 link "$DOTFILES_DIR/mako/config"                "$HOME/.config/mako/config"
 link "$DOTFILES_DIR/cava/config"                "$HOME/.config/cava/config"
