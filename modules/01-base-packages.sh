@@ -29,6 +29,8 @@ PKGS_CORE=(
     # intentionally left out of the installer.
     chromium discord
     seatd
+    # Login manager.
+    ly
     # GPU stack — required for Niri to find a working EGL renderer.
     # In a VMware/QEMU VM you ALSO need to enable 3D acceleration in the
     # hypervisor settings; the packages alone aren't enough.

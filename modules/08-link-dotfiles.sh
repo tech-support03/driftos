@@ -50,17 +50,10 @@ link "$DOTFILES_DIR/cava/config"                "$HOME/.config/cava/config"
 link "$DOTFILES_DIR/fastfetch/config.jsonc"     "$HOME/.config/fastfetch/config.jsonc"
 link "$DOTFILES_DIR/swaylock/config"            "$HOME/.config/swaylock/config"
 
-# Regreet runs as the `greeter` user, so its config must live under
-# /etc/greetd, not the user's home. Copy (not symlink) so the greeter user
-# can read it without traversing the user's homedir.
-log "Installing regreet config to /etc/greetd"
-sudo install -Dm644 "$DOTFILES_DIR/regreet/regreet.toml" /etc/greetd/regreet.toml
-sudo install -Dm644 "$DOTFILES_DIR/regreet/regreet.css"  /etc/greetd/regreet.css
-
 # Scripts → both ~/.local/bin (interactive shell) AND /usr/local/bin (every
 # PAM/systemd session). niri's spawn-at-startup uses bare names like
 # `wallpaper-init` and `power-menu`; those resolve via the session PATH which
-# greetd/login(1) bootstraps from /etc/profile, and that path does NOT
+# login(1) bootstraps from /etc/profile, and that path does NOT
 # include ~/.local/bin on Arch. Installing to /usr/local/bin (which IS in
 # the default PATH) means niri can always find them.
 mkdir -p "$HOME/.local/bin"

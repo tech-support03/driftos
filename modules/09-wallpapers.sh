@@ -32,9 +32,6 @@ first_wp="$(find "$WP_DIR" -maxdepth 1 -type f \
     \( -iname '*.jpg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | sort | head -n1)"
 
 if [[ -n "$first_wp" ]]; then
-    log "seeding regreet login wallpaper"
-    sudo install -Dm644 "$first_wp" /var/lib/regreet/wallpaper.jpg
-
     # Pre-blur the wallpaper for swaylock so the lock screen looks riced
     # without depending on live GL effects (which fail in VMs without 3D
     # acceleration). ImageMagick's `-blur 0x18` matches the swaylock-effects

@@ -27,12 +27,6 @@ AUR_PKGS=(
     hyprpicker
     wlr-randr
     xwayland-satellite
-    # Graphical greeter stack: regreet (GTK4) inside a cage kiosk compositor,
-    # both wired up through greetd. Replaces tuigreet so the login screen
-    # actually matches the rest of the rice.
-    greetd
-    regreet
-    cage
     # Side-bar dock apps not in the official repos. WhatsApp runs as a Chromium
     # web app (see scripts/whatsapp-web.sh) instead of the whatsapp-for-linux
     # AUR package, which is slow to build and lags upstream.
