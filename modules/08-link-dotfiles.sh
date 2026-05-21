@@ -43,7 +43,7 @@ link "$DOTFILES_DIR/waybar-side"                "$HOME/.config/waybar-side"
 link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
 # Side terminal, launcher, notifications, audio visualizer
-link "$DOTFILES_DIR/foot/foot.ini"              "$HOME/.config/foot/foot.ini"
+link "$DOTFILES_DIR/alacritty/alacritty.toml"   "$HOME/.config/alacritty/alacritty.toml"
 link "$DOTFILES_DIR/fuzzel/fuzzel.ini"          "$HOME/.config/fuzzel/fuzzel.ini"
 link "$DOTFILES_DIR/mako/config"                "$HOME/.config/mako/config"
 link "$DOTFILES_DIR/cava/config"                "$HOME/.config/cava/config"

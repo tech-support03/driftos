@@ -161,7 +161,7 @@ window-rule {
 }
 
 window-rule {
-    match app-id="foot"
+    match app-id="Alacritty"
     opacity 0.92
 }
 window-rule {
@@ -206,7 +206,7 @@ spawn-at-startup "sh" "-c" "swayidle -w timeout 1800 'swaylock -f' timeout 2100 
 //  Keybindings — macOS/ChromeOS-flavored.
 // =============================================================================
 binds {
-    Mod+Return         { spawn "foot"; }
+    Mod+Return         { spawn "alacritty"; }
     Mod+Space          { spawn "fuzzel"; }
     Mod+Shift+Q        { close-window; }
     Mod+L              { spawn "swaylock"; }

@@ -2,6 +2,10 @@
 # 07-services.sh — enable system + user services. Idempotent.
 set -Eeuo pipefail
 
+log "Setting timezone"
+sudo timedatectl set-timezone America/Los_Angeles
+sudo timedatectl set-ntp true
+
 log "Enabling system services"
 sudo systemctl enable --now NetworkManager.service
 sudo systemctl enable --now bluetooth.service

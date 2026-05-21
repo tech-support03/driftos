@@ -54,7 +54,7 @@
     // -------- DOCK (edit freely; add a "custom/pin-foo" block below to match) -
     "custom/pin-chrome":   { "format": "", "tooltip": "Google Chrome",  "on-click": "$HOME/.local/bin/app-launch google-chrome-stable" },
     "custom/pin-spotify":  { "format": "", "tooltip": "Spotify",  "on-click": "$HOME/.local/bin/app-launch spotify" },
-    "custom/pin-terminal": { "format": "", "tooltip": "Terminal", "on-click": "$HOME/.local/bin/app-launch foot" },
+    "custom/pin-terminal": { "format": "", "tooltip": "Terminal", "on-click": "$HOME/.local/bin/app-launch alacritty" },
     "custom/pin-discord":  { "format": "󰙯", "tooltip": "Discord",  "on-click": "$HOME/.local/bin/app-launch discord" },
     "custom/pin-whatsapp": { "format": "", "tooltip": "WhatsApp Web", "on-click": "$HOME/.local/bin/app-launch whatsapp-web" },
     "custom/pin-steam":    { "format": "", "tooltip": "Steam",    "on-click": "$HOME/.local/bin/app-launch steam" },
@@ -89,7 +89,7 @@
     },
 
     "clock": {
-        "format": "{:%H\n%M}",
+        "format": "{:%-I\n%M}",
         "tooltip-format": "<tt>{calendar}</tt>"
     },
 

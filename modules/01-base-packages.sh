@@ -12,7 +12,7 @@ PKGS_CORE=(
     grim slurp wl-clipboard cliphist
     brightnessctl playerctl
     fastfetch htop btop fzf ripgrep fd bat eza zoxide
-    foot
+    alacritty
     ttf-jetbrains-mono-nerd ttf-firacode-nerd noto-fonts noto-fonts-emoji
     noto-fonts-cjk papirus-icon-theme adw-gtk-theme
     python python-pip python-gobject
