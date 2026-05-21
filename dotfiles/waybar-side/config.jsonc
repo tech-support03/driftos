@@ -56,7 +56,7 @@
     "custom/pin-spotify":  { "format": "", "tooltip": "Spotify",  "on-click": "$HOME/.local/bin/app-launch spotify" },
     "custom/pin-terminal": { "format": "", "tooltip": "Terminal", "on-click": "$HOME/.local/bin/app-launch foot" },
     "custom/pin-discord":  { "format": "󰙯", "tooltip": "Discord",  "on-click": "$HOME/.local/bin/app-launch discord" },
-    "custom/pin-whatsapp": { "format": "", "tooltip": "WhatsApp", "on-click": "$HOME/.local/bin/app-launch whatsapp-for-linux" },
+    "custom/pin-whatsapp": { "format": "", "tooltip": "WhatsApp Web", "on-click": "$HOME/.local/bin/app-launch whatsapp-web" },
     "custom/pin-steam":    { "format": "", "tooltip": "Steam",    "on-click": "$HOME/.local/bin/app-launch steam" },
 
     "custom/launcher": {

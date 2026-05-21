@@ -33,9 +33,10 @@ AUR_PKGS=(
     greetd
     regreet
     cage
-    # Side-bar dock apps not in the official repos.
+    # Side-bar dock apps not in the official repos. WhatsApp runs as a Chromium
+    # web app (see scripts/whatsapp-web.sh) instead of the whatsapp-for-linux
+    # AUR package, which is slow to build and lags upstream.
     spotify
-    whatsapp-for-linux
 )
 
 log "Installing AUR packages with yay (this may take a while)"
