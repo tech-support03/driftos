@@ -9,19 +9,20 @@ Item {
     property real maxValue: 1000
     property color barColor: "#a78bfa"
 
-    implicitWidth: barCount * 7 - 3
-    implicitHeight: 42
+    // bar=3, gap=2 → 44*5-2=218px wide, 28px tall (was 305×42)
+    implicitWidth: barCount * 5 - 2
+    implicitHeight: 28
 
     Row {
         anchors.centerIn: parent
-        spacing: 3
+        spacing: 2
 
         Repeater {
             model: root.barCount
 
             Rectangle {
                 id: bar
-                width: 4
+                width: 3
                 radius: 2
                 color: root.barColor
                 anchors.verticalCenter: parent.verticalCenter
