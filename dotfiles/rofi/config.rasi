@@ -1,0 +1,15 @@
+/* ~/.config/rofi/config.rasi — driftos launcher config */
+configuration {
+    modi:                "drun,run";
+    show-icons:          true;
+    drun-display-format: "{name}";
+    display-drun:        " ";
+    icon-theme:          "Papirus-Dark";
+    terminal:            "alacritty";
+    font:                "JetBrainsMono Nerd Font 14";
+    disable-history:     false;
+    sidebar-mode:        false;
+    click-to-exit:       true;
+}
+
+@import "spotlight.rasi"

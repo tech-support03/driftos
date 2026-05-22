@@ -33,14 +33,14 @@ input {
 // =============================================================================
 output "DP-1" {
     // Monitor 1 — bottom center primary, 2560x1440 @ 180Hz
-    mode "2560x1440@179.998"
+    mode "2560x1440@180.000"
     position x=0 y=1440
     scale 1.0
     variable-refresh-rate
 }
 
-output "DP-2" {
-    // Monitor 2 — top stacked, 2560x1440 @ 60Hz
+output "DP-3" {
+    // Monitor 2 — top stacked, 2560x1440 @ 60Hz (actual connector is DP-3)
     mode "2560x1440@59.951"
     position x=0 y=0
     scale 1.0
@@ -170,6 +170,10 @@ window-rule {
     geometry-corner-radius 18
 }
 window-rule {
+    match app-id="rofi"
+    open-floating true
+}
+window-rule {
     match app-id="org.gnome.Calculator"
     opacity 0.95
 }
@@ -207,10 +211,11 @@ spawn-at-startup "sh" "-c" "swayidle -w timeout 1800 'swaylock -f' timeout 2100 
 // =============================================================================
 binds {
     Mod+Return         { spawn "alacritty"; }
-    Mod+Space          { spawn "fuzzel"; }
-    Mod+Shift+Q        { close-window; }
+    Mod+Space          { spawn "rofi" "-show" "drun"; }
+    Mod+W              { close-window; }
     Mod+L              { spawn "swaylock"; }
     Mod+Shift+E        { spawn "power-menu"; }
+    Mod+Shift+B        { spawn "wallpaper-next"; }
 
     Mod+Left           { focus-column-left; }
     Mod+Right          { focus-column-right; }

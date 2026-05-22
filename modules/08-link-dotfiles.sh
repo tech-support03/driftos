@@ -42,6 +42,9 @@ fi
 link "$DOTFILES_DIR/waybar-side"                "$HOME/.config/waybar-side"
 link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
+# App launcher — rofi with Spotlight-style theme
+link "$DOTFILES_DIR/rofi"                        "$HOME/.config/rofi"
+
 # Side terminal, launcher, notifications, audio visualizer
 link "$DOTFILES_DIR/alacritty/alacritty.toml"   "$HOME/.config/alacritty/alacritty.toml"
 link "$DOTFILES_DIR/gtk-3.0/settings.ini"       "$HOME/.config/gtk-3.0/settings.ini"

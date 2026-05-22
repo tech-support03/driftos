@@ -23,6 +23,7 @@ AUR_PKGS=(
     wdisplays
     kanshi
     swww
+    rofi-wayland
     grimblast-git
     hyprpicker
     wlr-randr
