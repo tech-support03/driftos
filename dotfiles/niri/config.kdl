@@ -215,7 +215,7 @@ binds {
     Mod+W              { close-window; }
     Mod+L              { spawn "swaylock"; }
     Mod+Shift+E        { spawn "power-menu"; }
-    Mod+Shift+B        { spawn "wallpaper-next"; }
+    Mod+Shift+B        { spawn "/home/arjun/.local/bin/wallpaper-next"; }
 
     Mod+Left           { focus-column-left; }
     Mod+Right          { focus-column-right; }
