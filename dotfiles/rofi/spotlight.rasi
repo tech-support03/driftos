@@ -94,7 +94,7 @@ element-text {
     background-color: @none;
     text-color:       @fg;
     vertical-align:   0.5;
-    highlight:        bold @accent;
+    highlight:        bold #a78bfa;
 }
 
 element-text selected {
