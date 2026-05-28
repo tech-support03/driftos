@@ -1,0 +1,82 @@
+# driftos — purple-accented btop theme that matches the rest of the rice.
+# Accent #c5b3ff drives CPU/processes; #a5d8ff and #b5f0d4 echo Theme.qml's
+# accent2 (cool blue) and accent3 (mint) for memory and network panels.
+
+# Transparent background — alacritty already provides translucency.
+theme[main_bg]=""
+
+theme[main_fg]="#f4f4f6"
+theme[title]="#f4f4f6"
+
+# Highlight color for keyboard shortcuts (the bracketed letters)
+theme[hi_fg]="#c5b3ff"
+
+# Selected process row
+theme[selected_bg]="#c5b3ff"
+theme[selected_fg]="#12131a"
+
+# Disabled / dimmed text
+theme[inactive_fg]="#5e5e66"
+
+# Text that sits on top of graphs (uptime / scale labels)
+theme[graph_text]="#f4f4f6"
+
+# Background fill of bar meters
+theme[meter_bg]="#23232c"
+
+# Mini cpu graphs in the process box, memory details, etc.
+theme[proc_misc]="#c5b3ff"
+
+# Box outlines — vary so panels stay visually distinct.
+theme[cpu_box]="#c5b3ff"
+theme[mem_box]="#a5d8ff"
+theme[net_box]="#b5f0d4"
+theme[proc_box]="#c5b3ff"
+
+# Dividers inside boxes
+theme[div_line]="#2a2a35"
+
+# Temperature gradient: cool purple → bright lavender → warning pink
+theme[temp_start]="#6e5cae"
+theme[temp_mid]="#c5b3ff"
+theme[temp_end]="#e87fc3"
+
+# CPU usage gradient
+theme[cpu_start]="#6e5cae"
+theme[cpu_mid]="#a78bfa"
+theme[cpu_end]="#c5b3ff"
+
+# Mem/Disk free meter (mint)
+theme[free_start]="#4a8268"
+theme[free_mid]="#7dcfa8"
+theme[free_end]="#b5f0d4"
+
+# Mem/Disk cached meter (cyan-blue)
+theme[cached_start]="#4a7da6"
+theme[cached_mid]="#76a8d4"
+theme[cached_end]="#a5d8ff"
+
+# Mem/Disk available meter (lighter blue)
+theme[available_start]="#5a8aab"
+theme[available_mid]="#8ab5d9"
+theme[available_end]="#b5dcff"
+
+# Mem/Disk used meter (warm, drifts to danger red)
+theme[used_start]="#8c5b4a"
+theme[used_mid]="#d49880"
+theme[used_end]="#e87575"
+
+# Download (incoming) — purple
+theme[download_start]="#6e5cae"
+theme[download_mid]="#a78bfa"
+theme[download_end]="#c5b3ff"
+
+# Upload (outgoing) — mint to balance the panel
+theme[upload_start]="#4a8268"
+theme[upload_mid]="#7dcfa8"
+theme[upload_end]="#b5f0d4"
+
+# Process box gradient (low CPU → high CPU)
+theme[process_start]="#5e5e66"
+theme[process_mid]="#a78bfa"
+theme[process_end]="#c5b3ff"

@@ -28,4 +28,9 @@ else
 fi
 
 echo "$idx" > "$CACHE"
-exec "$WP_CLI" img "${imgs[$idx]}" "${TRANSITION_ARGS[@]}"
+"$WP_CLI" img "${imgs[$idx]}" "${TRANSITION_ARGS[@]}"
+# Pre-blurred copy for gtklock's lock background (kept in sync with wallpaper).
+if command -v magick >/dev/null 2>&1; then
+    magick "${imgs[$idx]}" -resize 2560x1440^ -gravity center -extent 2560x1440 \
+        -blur 0x16 -modulate 72 "$HOME/.cache/lockscreen-bg.jpg" || true
+fi

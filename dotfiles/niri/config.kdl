@@ -165,6 +165,12 @@ window-rule {
     opacity 0.92
 }
 window-rule {
+    match app-id="fastfetch-popup"
+    open-floating true
+    opacity 0.92
+    geometry-corner-radius 18
+}
+window-rule {
     match app-id="fuzzel"
     opacity 0.95
     geometry-corner-radius 18
@@ -188,6 +194,17 @@ layer-rule {
     place-within-backdrop false
     shadow { off; }
 }
+layer-rule {
+    match namespace="^quickshell-launcher$"
+    place-within-backdrop false
+    shadow { off; }
+}
+// Session lock: block screenshares/screenshots while locked.
+layer-rule {
+    match namespace="^session-lock$"
+    block-out-from "screencast"
+    place-within-backdrop false
+}
 
 // =============================================================================
 //  Autostart — wallpaper, bars, idle/lock daemon, notifications, clipboard.
@@ -201,19 +218,19 @@ spawn-at-startup "wl-paste" "--type" "text"  "--watch" "cliphist" "store"
 spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 spawn-at-startup "xwayland-satellite"
-// swayidle: 30 min until lock, 35 min until display off. Longer than the
-// default 5 min so first-boot debugging doesn't get interrupted by the
-// (effects-heavy) lock screen. Reduce here if you want it tighter.
-spawn-at-startup "sh" "-c" "swayidle -w timeout 1800 'swaylock -f' timeout 2100 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors' before-sleep 'swaylock -f' & disown"
+// swayidle: 5 min until lock (gtklock), 10 min until display off.
+// gtklock is the lock screen (Quickshell's WlSessionLock was unstable).
+// `pgrep -x gtklock ||` guards against stacking multiple lock instances.
+spawn-at-startup "sh" "-c" "swayidle -w timeout 300 'pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini' timeout 600 'niri msg action power-off-monitors' resume 'niri msg action power-on-monitors' before-sleep 'pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini' & disown"
 
 // =============================================================================
 //  Keybindings — macOS/ChromeOS-flavored.
 // =============================================================================
 binds {
     Mod+Return         { spawn "alacritty"; }
-    Mod+Space          { spawn "rofi" "-show" "drun"; }
+    Mod+Space          { spawn "qs" "ipc" "call" "launcher" "toggle"; }
     Mod+W              { close-window; }
-    Mod+L              { spawn "swaylock"; }
+    Mod+L              { spawn "sh" "-c" "pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini"; }
     Mod+Shift+E        { spawn "power-menu"; }
     Mod+Shift+B        { spawn "/home/arjun/.local/bin/wallpaper-next"; }
 

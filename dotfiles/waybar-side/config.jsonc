@@ -32,6 +32,7 @@
         "custom/sysmon-cpu",
         "custom/sysmon-mem",
         "custom/sysmon-gpu",
+        "custom/sysmon-disk",
         "clock",
         "custom/volume",
         "custom/power"
@@ -62,7 +63,7 @@
     "custom/launcher": {
         "format": "",
         "tooltip": "App launcher",
-        "on-click": "fuzzel"
+        "on-click": "qs ipc call launcher toggle"
     },
 
     // -------- SYSTEM MONITOR (icon-only; hover for details) ----------------
@@ -71,25 +72,32 @@
         "interval": 2,
         "format": "{}",
         "return-type": "json",
-        "on-click": "foot -e btop"
+        "on-click": "alacritty -e btop"
     },
     "custom/sysmon-gpu": {
         "exec": "$HOME/.local/bin/sysmon-gpu",
         "interval": 2,
         "format": "{}",
         "return-type": "json",
-        "on-click": "foot -e nvtop 2>/dev/null || foot -e radeontop 2>/dev/null || foot -e btop"
+        "on-click": "sh -c 'alacritty -e nvtop 2>/dev/null || alacritty -e radeontop 2>/dev/null || alacritty -e btop'"
     },
     "custom/sysmon-mem": {
         "exec": "$HOME/.local/bin/sysmon-mem",
         "interval": 2,
         "format": "{}",
         "return-type": "json",
-        "on-click": "foot -e btop"
+        "on-click": "alacritty -e btop"
+    },
+    "custom/sysmon-disk": {
+        "exec": "$HOME/.local/bin/sysmon-disk",
+        "interval": 30,
+        "format": "{}",
+        "return-type": "json",
+        "on-click": "alacritty -e btop"
     },
 
     "clock": {
-        "format": "{:%-I\n%M}",
+        "format": "{:%I\n%M}",
         "tooltip-format": "<tt>{calendar}</tt>"
     },
 

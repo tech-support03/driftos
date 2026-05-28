@@ -21,6 +21,10 @@ PKGS_CORE=(
     mako
     fuzzel
     swaybg
+    # gtklock — lock screen. Quickshell's WlSessionLock proved unstable
+    # (CLAUDE.md §1 fallback). swayidle/niri spawn this; dotfiles link its
+    # config via 08-link-dotfiles.sh.
+    gtklock
     # Quickshell — QtQuick-based shell; drives the Caelestia-style top bar.
     quickshell
     # Side-bar dock apps that live in the official repos. spotify is AUR (see

@@ -33,7 +33,7 @@ window#waybar.waybar-side {
 #custom-pin-chrome, #custom-pin-spotify, #custom-pin-terminal,
 #custom-pin-discord, #custom-pin-whatsapp, #custom-pin-steam,
 #custom-launcher,
-#custom-sysmon-cpu, #custom-sysmon-gpu, #custom-sysmon-mem,
+#custom-sysmon-cpu, #custom-sysmon-gpu, #custom-sysmon-mem, #custom-sysmon-disk,
 #clock,
 #custom-volume,
 #custom-power {
@@ -51,7 +51,7 @@ window#waybar.waybar-side {
 #custom-pin-chrome:hover, #custom-pin-spotify:hover, #custom-pin-terminal:hover,
 #custom-pin-discord:hover, #custom-pin-whatsapp:hover, #custom-pin-steam:hover,
 #custom-launcher:hover,
-#custom-sysmon-cpu:hover, #custom-sysmon-gpu:hover, #custom-sysmon-mem:hover,
+#custom-sysmon-cpu:hover, #custom-sysmon-gpu:hover, #custom-sysmon-mem:hover, #custom-sysmon-disk:hover,
 #clock:hover,
 #custom-volume:hover,
 #custom-power:hover {
@@ -71,6 +71,7 @@ window#waybar.waybar-side {
 #custom-sysmon-cpu     { color: #fb7185; }
 #custom-sysmon-gpu     { color: #c084fc; }
 #custom-sysmon-mem     { color: #34d399; }
+#custom-sysmon-disk    { color: #fbbf24; }
 /* line-height is web CSS — not in GTK4's subset. Use padding to tighten the
    stacked HH/MM lines instead. */
 #clock                 { color: #e5e7eb; font-size: 14pt; padding: 4px 0; }

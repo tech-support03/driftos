@@ -12,7 +12,6 @@ show-failed-attempts
 # ---- Background: pre-blurred image with vignette tint -----------------------
 image=/var/lib/lockscreen/bg.jpg
 scaling=fill
-fade-in=0.3
 
 # ---- Borderless / clean -----------------------------------------------------
 indicator

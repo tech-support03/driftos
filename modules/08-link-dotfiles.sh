@@ -53,7 +53,12 @@ link "$DOTFILES_DIR/fuzzel/fuzzel.ini"          "$HOME/.config/fuzzel/fuzzel.ini
 link "$DOTFILES_DIR/mako/config"                "$HOME/.config/mako/config"
 link "$DOTFILES_DIR/cava/config"                "$HOME/.config/cava/config"
 link "$DOTFILES_DIR/fastfetch/config.jsonc"     "$HOME/.config/fastfetch/config.jsonc"
+link "$DOTFILES_DIR/btop/btop.conf"              "$HOME/.config/btop/btop.conf"
+link "$DOTFILES_DIR/btop/themes/driftos.theme"   "$HOME/.config/btop/themes/driftos.theme"
 link "$DOTFILES_DIR/swaylock/config"            "$HOME/.config/swaylock/config"
+
+# gtklock — lock screen (replaces Quickshell's unstable WlSessionLock).
+link "$DOTFILES_DIR/gtklock"                     "$HOME/.config/gtklock"
 
 # Scripts → both ~/.local/bin (interactive shell) AND /usr/local/bin (every
 # PAM/systemd session). niri's spawn-at-startup uses bare names like
