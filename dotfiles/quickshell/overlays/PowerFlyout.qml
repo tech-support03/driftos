@@ -43,8 +43,10 @@ Scope {
     function fire(i) {
         const a = actions[i]
         if (!a) return
-        runner.command = a.cmd
-        runner.running = true
+        // execDetached forks+execs the child as an independent process so it
+        // survives Quickshell — critical for `loginctl poweroff`/`reboot`,
+        // which kill the parent before they finish.
+        Quickshell.execDetached(a.cmd)
         close()
     }
 
@@ -52,11 +54,6 @@ Scope {
         id: hideTimer
         interval: 220
         onTriggered: if (!scope.active) panel.visible = false
-    }
-
-    Process {
-        id: runner
-        running: false
     }
 
     IpcHandler {
