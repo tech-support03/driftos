@@ -27,6 +27,9 @@ expected). Match it precisely.
   without asking.
 - **No filler.** No placeholder widgets, no "TODO" panels shipped to
   the user. Either implement or leave out.
+- **12-hour clocks everywhere.** All clock surfaces (sidebar, top bar
+  dashboard, lock screen, OSD) render time as `h:MM` with an `AM`/`PM`
+  suffix. Never `HH:MM` 24-hour.
 
 ---
 
@@ -44,7 +47,7 @@ expected). Match it precisely.
 | Bluetooth | **BlueZ + bluetuith** (CLI) | Quickshell shows status via DBus |
 | Idle / autolock | **swayidle** | Triggers Quickshell lock |
 | Terminal | **alacritty** | GPU-accelerated, Wayland-native |
-| Screenshot | **grim + slurp + satty** | Annotate after capture |
+| Screenshot | **niri built-in** (`screenshot` action) | Interactive region/window/output picker, saves to `~/Pictures/Screenshots/` |
 | Clipboard history | **wl-clipboard + cliphist** | |
 | Login manager | **greetd + tuigreet** | Minimal, no GUI dep |
 | File manager | **nautilus** | Familiar (ChromeOS/macOS-ish) |
@@ -66,7 +69,7 @@ niri alacritty fuzzel swww pipewire pipewire-pulse pipewire-alsa wireplumber
 networkmanager network-manager-applet bluez bluez-utils
 xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk
 xdg-user-dirs polkit-gnome
-grim slurp wl-clipboard
+wl-clipboard
 nautilus
 greetd
 inter-font ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
@@ -79,7 +82,6 @@ brightnessctl playerctl
 ```
 quickshell-git           # the shell itself
 swayidle                 # idle daemon (Wayland)
-satty                    # screenshot annotator
 cliphist                 # clipboard history
 tuigreet                 # greeter for greetd
 google-chrome            # user-requested app
@@ -174,7 +176,7 @@ out the QML widgets to match the HTML mockup.
 | Super+B | chrome |
 | Super+Q | close window |
 | Super+L | lock (`quickshell lock` or `loginctl lock-session`) |
-| Super+Shift+S | screenshot region (`grim+slurp+satty`) |
+| Print | screenshot (niri built-in interactive UI) |
 | Super+V | cliphist picker via fuzzel |
 | XF86Audio* | playerctl / wpctl |
 | XF86MonBrightness* | brightnessctl |
@@ -359,7 +361,7 @@ do not paper over.
       reboot LAST), poweroff works.
 - [ ] `Super+L` → lock screen appears, time correct, password unlocks.
 - [ ] Idle 5min → auto-lock; 10min → screen off; mouse wakes both.
-- [ ] Screenshot bind captures region and opens satty.
+- [ ] `Print` opens niri's built-in screenshot UI; output saved to `~/Pictures/Screenshots/`.
 - [ ] Notifications: `notify-send "test"` shows popup top-right,
       auto-dismisses, appears in top bar history.
 - [ ] **No** battery widget visible anywhere.

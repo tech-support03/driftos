@@ -9,9 +9,9 @@ PKGS_CORE=(
     bluez bluez-utils blueman
     polkit polkit-gnome xdg-user-dirs xdg-utils
     qt5-wayland qt6-wayland
-    grim slurp wl-clipboard cliphist
+    wl-clipboard cliphist
     brightnessctl playerctl
-    fastfetch htop btop fzf ripgrep fd bat eza zoxide
+    fastfetch htop btop fzf ripgrep fd bat eza zoxide jq
     alacritty
     ttf-jetbrains-mono-nerd ttf-firacode-nerd noto-fonts noto-fonts-emoji
     noto-fonts-cjk papirus-icon-theme adw-gtk-theme

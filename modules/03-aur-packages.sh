@@ -15,7 +15,6 @@ install -d -m 0700 "${XDG_RUNTIME_DIR:-/tmp}/gnupg" 2>/dev/null || true
 
 AUR_PKGS=(
     niri
-    waybar
     swaylock-effects
     swayidle
     wlogout
@@ -24,7 +23,6 @@ AUR_PKGS=(
     kanshi
     swww
     rofi-wayland
-    grimblast-git
     hyprpicker
     wlr-randr
     xwayland-satellite

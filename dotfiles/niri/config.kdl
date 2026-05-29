@@ -120,9 +120,9 @@ layout {
     }
 
     struts {
-        // No struts: the waybar side bar is a layer-shell surface with its own
-        // exclusive zone, so it already reserves its width. Adding a strut on
-        // top of that double-reserves and leaves a gap between bar and windows.
+        // No struts: the Quickshell side bar is a layer-shell surface with its
+        // own exclusive zone, so it already reserves its width. Adding a strut
+        // on top of that double-reserves and leaves a gap between bar and windows.
         left   0
         right  0
         top    0
@@ -185,7 +185,7 @@ window-rule {
 }
 // Side bar / top bar — never give them focus rings or shadows.
 layer-rule {
-    match namespace="^waybar-side$"
+    match namespace="^quickshell-sidebar$"
     place-within-backdrop false
     shadow { off; }
 }
@@ -210,8 +210,7 @@ layer-rule {
 //  Autostart — wallpaper, bars, idle/lock daemon, notifications, clipboard.
 // =============================================================================
 spawn-at-startup "wallpaper-init"
-// Side bar = waybar; top bar = quickshell (Caelestia-style hover dashboard).
-spawn-at-startup "sh" "-c" "pkill -x waybar; waybar -c ~/.config/waybar-side/config.jsonc -s ~/.config/waybar-side/style.css & disown"
+// Both bars are Quickshell (top-bar dashboard + left side-bar with system monitor).
 spawn-at-startup "quickshell"
 spawn-at-startup "mako"
 spawn-at-startup "wl-paste" "--type" "text"  "--watch" "cliphist" "store"
@@ -271,8 +270,7 @@ binds {
     XF86MonBrightnessUp   { spawn "brightnessctl" "set" "+5%"; }
     XF86MonBrightnessDown { spawn "brightnessctl" "set" "5%-"; }
 
-    Print              { spawn "grimblast" "copy" "area"; }
-    Mod+Print          { spawn "grimblast" "copysave" "area"; }
+    Print              { screenshot; }
 }
 
 environment {

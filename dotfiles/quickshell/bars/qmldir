@@ -2,3 +2,5 @@ module Bars
 TopBar 1.0 TopBar.qml
 Waveform 1.0 Waveform.qml
 MiniCalendar 1.0 MiniCalendar.qml
+SystemMonitor 1.0 SystemMonitor.qml
+SideBar 1.0 SideBar.qml

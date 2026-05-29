@@ -19,6 +19,7 @@ ShellRoot {
 
     // --- panels (one per output handled inside each component) ---
     Bars.TopBar { }
+    Bars.SideBar { }
 
     // --- overlays --------------------------------------------------------
     // Launchpad-style app grid. Triggered via `qs ipc call launcher toggle`

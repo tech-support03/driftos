@@ -38,8 +38,7 @@ EOF
     ok "seeded placeholder niri/monitor.kdl"
 fi
 
-# Side panel = waybar; top bar = quickshell (Caelestia-style hover dashboard)
-link "$DOTFILES_DIR/waybar-side"                "$HOME/.config/waybar-side"
+# Both bars (top-bar dashboard + left side-bar) are Quickshell-driven.
 link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
 # App launcher — rofi with Spotlight-style theme
