@@ -234,8 +234,10 @@ Quickshell docs first** (`quickshell.outfoxxed.me`). Key APIs:
      that opens a small editor dialog (add/remove/reorder
      `dock.json`).
   9. **Power** button → flyout (lock / sign out / suspend / reboot /
-     power off). Power off + reboot must `loginctl` the right verbs;
-     do NOT `systemctl poweroff` directly.
+     power off). Use `systemctl suspend|reboot|poweroff` — these route
+     through logind + polkit, so the active-session user runs them
+     without a password. (`loginctl` has NO power verbs — only session/
+     seat management — so don't use it for poweroff/reboot/suspend.)
 
 - **No battery indicator anywhere.** This is a desktop. Hide the
   battery service entirely (`Battery.qml` exists but `enabled: false`).
@@ -295,7 +297,8 @@ never auto-blanks. The only paths to a locked or sleeping machine are
 user-initiated:
 
 - `Mod+L` → `gtklock -d -c ~/.config/gtklock/config.ini`
-- Quickshell power flyout → suspend / reboot / power off via `loginctl`
+- Quickshell power flyout → suspend / reboot / power off via `systemctl`
+  (logind + polkit; no password needed for the active-session user)
 
 Do **not** re-add `swayidle` to `spawn-at-startup`. If lock-on-suspend
 is wanted later, wire it explicitly and ask the user first.

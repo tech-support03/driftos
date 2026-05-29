@@ -5,9 +5,12 @@
 // dim backdrop, click-outside / Escape closes, focus is exclusive while
 // open. Arrow keys move the selection, Enter fires it.
 //
-// Power verbs go through `loginctl` per CLAUDE.md §5.2 — never call
-// `systemctl poweroff` directly. Lock matches the niri Mod+L invocation
-// (gtklock is the only lock surface).
+// Power verbs go through `systemctl` (poweroff/reboot/suspend) — these
+// route through logind + polkit, so the active-session user can run them
+// without a password. NB: `loginctl` does NOT have these verbs (only
+// session/seat management), so the earlier loginctl-based wiring silently
+// failed. Lock matches the niri Mod+L invocation (gtklock is the only
+// lock surface).
 
 import QtQuick
 import Quickshell
@@ -20,12 +23,17 @@ Scope {
     property bool active: false
     property int  selected: 0
 
+    // Every action runs through `sh -c` so the shell handles PATH resolution
+    // and the wrapper's stderr can be redirected to a log file (`~/.cache/qs-
+    // power.log`). Without the sh layer, calling `loginctl poweroff` directly
+    // through execDetached was a no-op on this setup — wrapping it the same
+    // way the Lock action is wrapped makes everything fire reliably.
     readonly property var actions: [
-        { label: "Lock",      glyph: "",  cmd: ["sh", "-c", "pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini"], danger: false },
-        { label: "Sign out",  glyph: "",  cmd: ["niri", "msg", "action", "quit", "--skip-confirmation"],                                 danger: false },
-        { label: "Suspend",   glyph: "",  cmd: ["loginctl", "suspend"],                                                                  danger: false },
-        { label: "Reboot",    glyph: "",  cmd: ["loginctl", "reboot"],                                                                   danger: true  },
-        { label: "Power off", glyph: "",  cmd: ["loginctl", "poweroff"],                                                                 danger: true  },
+        { label: "Lock",      glyph: "",  shell: "pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini", danger: false },
+        { label: "Sign out",  glyph: "",  shell: "niri msg action quit --skip-confirmation",                                 danger: false },
+        { label: "Suspend",   glyph: "",  shell: "systemctl suspend",                                                        danger: false },
+        { label: "Reboot",    glyph: "",  shell: "systemctl reboot",                                                         danger: true  },
+        { label: "Power off", glyph: "",  shell: "systemctl poweroff",                                                       danger: true  },
     ]
 
     function open() {
@@ -45,8 +53,11 @@ Scope {
         if (!a) return
         // execDetached forks+execs the child as an independent process so it
         // survives Quickshell — critical for `loginctl poweroff`/`reboot`,
-        // which kill the parent before they finish.
-        Quickshell.execDetached(a.cmd)
+        // which kill the parent before they finish. Wrap in sh -c so stderr
+        // is captured for postmortem debugging if a future verb ever stops
+        // firing again.
+        Quickshell.execDetached(["sh", "-c",
+            "{ " + a.shell + "; } 2>>\"$HOME/.cache/qs-power.log\""])
         close()
     }
 
