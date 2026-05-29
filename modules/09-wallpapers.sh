@@ -24,31 +24,9 @@ for name in "${!WALLS[@]}"; do
 done
 
 # Drop a wallpaper rotation/init script the niri config calls at startup.
+# wallpaper-init / wallpaper-next also regenerate the gtklock background
+# cache at ~/.cache/lockscreen-bg.jpg, so the lock surface tracks the
+# current desktop wallpaper without a separate pre-blur step here.
 install -Dm755 "$SCRIPTS_DIR/wallpaper-init.sh" "$HOME/.local/bin/wallpaper-init"
-
-# Pick the first downloaded wallpaper for both regreet login + lock screen.
-# Falls back silently if every download failed (e.g. no network).
-first_wp="$(find "$WP_DIR" -maxdepth 1 -type f \
-    \( -iname '*.jpg' -o -iname '*.png' -o -iname '*.webp' \) 2>/dev/null | sort | head -n1)"
-
-if [[ -n "$first_wp" ]]; then
-    # Pre-blur the wallpaper for swaylock so the lock screen looks riced
-    # without depending on live GL effects (which fail in VMs without 3D
-    # acceleration). ImageMagick's `-blur 0x18` matches the swaylock-effects
-    # `effect-blur=18x4` aesthetic closely.
-    log "pre-blurring lock-screen background"
-    sudo install -d -m 0755 /var/lib/lockscreen
-    if command -v magick >/dev/null 2>&1; then
-        sudo magick "$first_wp" -resize 1920x1080^ -gravity center -extent 1920x1080 \
-            -blur 0x18 -modulate 85,90 /var/lib/lockscreen/bg.jpg
-    elif command -v convert >/dev/null 2>&1; then
-        sudo convert "$first_wp" -resize 1920x1080^ -gravity center -extent 1920x1080 \
-            -blur 0x18 -modulate 85,90 /var/lib/lockscreen/bg.jpg
-    else
-        warn "no ImageMagick — copying unblurred wallpaper as lock background"
-        sudo install -Dm644 "$first_wp" /var/lib/lockscreen/bg.jpg
-    fi
-    ok "lock-screen background written to /var/lib/lockscreen/bg.jpg"
-fi
 
 ok "wallpapers staged at $WP_DIR"

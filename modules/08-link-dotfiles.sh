@@ -38,23 +38,18 @@ EOF
     ok "seeded placeholder niri/monitor.kdl"
 fi
 
-# Both bars (top-bar dashboard + left side-bar) are Quickshell-driven.
+# Bars, launcher overlay, and power flyout are all Quickshell-driven.
 link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
-# App launcher — rofi with Spotlight-style theme
-link "$DOTFILES_DIR/rofi"                        "$HOME/.config/rofi"
-
-# Side terminal, launcher, notifications, audio visualizer
+# Terminal, notifications, audio visualizer, system utilities.
 link "$DOTFILES_DIR/alacritty/alacritty.toml"   "$HOME/.config/alacritty/alacritty.toml"
 link "$DOTFILES_DIR/gtk-3.0/settings.ini"       "$HOME/.config/gtk-3.0/settings.ini"
 link "$DOTFILES_DIR/gtk-4.0/settings.ini"       "$HOME/.config/gtk-4.0/settings.ini"
-link "$DOTFILES_DIR/fuzzel/fuzzel.ini"          "$HOME/.config/fuzzel/fuzzel.ini"
 link "$DOTFILES_DIR/mako/config"                "$HOME/.config/mako/config"
 link "$DOTFILES_DIR/cava/config"                "$HOME/.config/cava/config"
 link "$DOTFILES_DIR/fastfetch/config.jsonc"     "$HOME/.config/fastfetch/config.jsonc"
 link "$DOTFILES_DIR/btop/btop.conf"              "$HOME/.config/btop/btop.conf"
 link "$DOTFILES_DIR/btop/themes/driftos.theme"   "$HOME/.config/btop/themes/driftos.theme"
-link "$DOTFILES_DIR/swaylock/config"            "$HOME/.config/swaylock/config"
 
 # gtklock — lock screen (replaces Quickshell's unstable WlSessionLock).
 link "$DOTFILES_DIR/gtklock"                     "$HOME/.config/gtklock"

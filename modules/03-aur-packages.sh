@@ -15,16 +15,8 @@ install -d -m 0700 "${XDG_RUNTIME_DIR:-/tmp}/gnupg" 2>/dev/null || true
 
 AUR_PKGS=(
     niri
-    swaylock-effects
-    swayidle
-    wlogout
     nwg-displays
-    wdisplays
     kanshi
-    swww
-    rofi-wayland
-    hyprpicker
-    wlr-randr
     xwayland-satellite
     # Side-bar dock apps not in the official repos. WhatsApp runs as a Chromium
     # web app (see scripts/whatsapp-web.sh) instead of the whatsapp-for-linux

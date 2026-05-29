@@ -19,11 +19,10 @@ PKGS_CORE=(
     gtk3 gtk4 libadwaita
     cava
     mako
-    fuzzel
     swaybg
     # gtklock — lock screen. Quickshell's WlSessionLock proved unstable
-    # (CLAUDE.md §1 fallback). swayidle/niri spawn this; dotfiles link its
-    # config via 08-link-dotfiles.sh.
+    # (CLAUDE.md §1 fallback). niri Mod+L spawns this; dotfiles link its
+    # config via 08-link-dotfiles.sh. Lock is manual-only — no idle daemon.
     gtklock
     # Quickshell — QtQuick-based shell; drives the Caelestia-style top bar.
     quickshell
@@ -42,8 +41,10 @@ PKGS_CORE=(
     # names mesa-utils / egl-utils are Debian, not Arch).
     mesa mesa-demos vulkan-icd-loader vulkan-swrast
     xorg-xwayland
-    # ImageMagick — pre-blurs the lock-screen background at install time so
-    # swaylock doesn't need live GL effects to look riced.
+    # ImageMagick — wallpaper-init / wallpaper-next pre-blur the current
+    # wallpaper into ~/.cache/lockscreen-bg.jpg so gtklock has a fresh
+    # background. Without it the lock surface falls back to whatever was
+    # last cached.
     imagemagick
 )
 

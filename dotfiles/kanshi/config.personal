@@ -1,6 +1,6 @@
 # ~/.config/kanshi/config (personal profile)
 # Personal 3-monitor topology. Connector names are best-guesses — run
-# `niri msg outputs` (or `wlr-randr`) on the target machine and edit if needed.
+# `niri msg outputs` on the target machine and edit if needed.
 
 profile personal-3mon {
     output DP-1     mode 2560x1440@180Hz position 0,1440    scale 1 enable

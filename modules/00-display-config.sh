@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 00-display-config.sh — abstracts the display layout into kanshi profiles +
-# launches nwg-displays/wdisplays on first run so the user can drag screens visually.
+# launches nwg-displays on first run so the user can drag screens visually.
 set -Eeuo pipefail
 
 CFG_DIR="$HOME/.config/kanshi"

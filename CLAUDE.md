@@ -38,65 +38,65 @@ expected). Match it precisely.
 | Layer | Choice | Why |
 |---|---|---|
 | Compositor | **Niri** | Scrollable tiling, built-in animations, blur, no Hyprland |
-| Shell / bar / widgets / lock | **Quickshell** | QML, full custom UI (Caelestia uses this) |
-| App launcher | **Fuzzel** | Lightweight, native Wayland, themable |
-| Notifications | Quickshell custom (DBus listener) | Avoid swaync dependency |
-| Wallpaper | **swww** | Animated, smooth transitions |
+| Shell / bar / widgets / launcher / power flyout | **Quickshell** | QML, full custom UI (Caelestia uses this) |
+| Lock screen | **gtklock** | Approved fallback — Quickshell's WlSessionLock proved unstable |
+| Notifications | **mako** | DBus daemon; Quickshell custom widget not yet built |
+| Wallpaper | **swaybg** (or **swww** if present) | swaybg is the default; wallpaper-init.sh prefers swww when installed |
 | Audio | **PipeWire + WirePlumber** | Standard |
 | Network | **NetworkManager** | Standard, queried by Quickshell |
 | Bluetooth | **BlueZ + bluetuith** (CLI) | Quickshell shows status via DBus |
-| Idle / autolock | **swayidle** | Triggers Quickshell lock |
+| Idle / autolock | _none_ | Lock is manual-only (`Mod+L`); system never auto-sleeps |
 | Terminal | **alacritty** | GPU-accelerated, Wayland-native |
 | Screenshot | **niri built-in** (`screenshot` action) | Interactive region/window/output picker, saves to `~/Pictures/Screenshots/` |
 | Clipboard history | **wl-clipboard + cliphist** | |
-| Login manager | **greetd + tuigreet** | Minimal, no GUI dep |
+| Login manager | **ly** | TUI greeter on tty1, no GUI dep |
 | File manager | **nautilus** | Familiar (ChromeOS/macOS-ish) |
 | Fonts | **Inter + JetBrains Mono Nerd Font** | |
 | Icons | **Papirus-Dark** (system) | |
 
-> If Quickshell can't do something cleanly (e.g. its lock surface
-> proves unstable), the only approved fallbacks are: **gtklock** for
-> lock, **fuzzel** for launcher. Do not pull in waybar, eww, ags,
-> dunst, mako, hyprlock, swaylock, rofi, wofi.
+> Quickshell owns launcher, power flyout, both bars, and (eventually)
+> notifications. The only approved fallback is **gtklock** for the
+> lock surface. Do not pull in waybar, eww, ags, dunst, hyprlock,
+> swaylock, rofi, wofi, fuzzel, wlogout, swayidle.
 
 ---
 
 ## 2. Packages
 
+Authoritative lists live in `modules/01-base-packages.sh` and
+`modules/03-aur-packages.sh`; the summary below is for orientation.
+
 ### pacman
 ```
-niri alacritty fuzzel swww pipewire pipewire-pulse pipewire-alsa wireplumber
-networkmanager network-manager-applet bluez bluez-utils
+niri alacritty quickshell gtklock mako swaybg cava
+pipewire pipewire-pulse pipewire-alsa wireplumber pavucontrol
+networkmanager bluez bluez-utils blueman
 xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk
-xdg-user-dirs polkit-gnome
-wl-clipboard
-nautilus
-greetd
-inter-font ttf-jetbrains-mono-nerd noto-fonts noto-fonts-emoji
-papirus-icon-theme
-qt6-base qt6-declarative qt6-wayland qt6-svg qt6-multimedia
+xdg-user-dirs polkit-gnome wl-clipboard cliphist
+nautilus chromium discord
+ly seatd
+ttf-jetbrains-mono-nerd ttf-firacode-nerd noto-fonts noto-fonts-emoji
+papirus-icon-theme adw-gtk-theme
+qt5-wayland qt6-wayland
 brightnessctl playerctl
 ```
 
-### AUR (paru or yay — pick one, document it)
+### AUR (yay)
 ```
-quickshell-git           # the shell itself
-swayidle                 # idle daemon (Wayland)
-cliphist                 # clipboard history
-tuigreet                 # greeter for greetd
-google-chrome            # user-requested app
+niri                     # compositor (also in extra; pin to AUR if preferred)
+nwg-displays             # visual display arranger
+kanshi                   # auto-applies display profiles
+xwayland-satellite       # XWayland for niri
 spotify                  # user-requested app
-discord                  # user-requested app
-whatsapp-for-linux       # user-requested app (or zapzap if preferred)
-# steam goes through multilib pacman, not AUR
 ```
 
 Enable `[multilib]` in `/etc/pacman.conf` for steam.
 
 ### Services to enable
 ```bash
-systemctl enable --now NetworkManager bluetooth greetd
-systemctl --user enable --now pipewire pipewire-pulse wireplumber
+systemctl enable --now NetworkManager bluetooth seatd
+systemctl enable ly@tty1.service           # greeter on tty1
+systemctl --user enable --now pipewire pipewire-pulse wireplumber kanshi
 ```
 
 ---
@@ -106,49 +106,37 @@ systemctl --user enable --now pipewire pipewire-pulse wireplumber
 ```
 ~/.config/
 ├── niri/
-│   └── config.kdl                  # see §4
+│   ├── config.kdl                  # see §4
+│   └── monitor.kdl                 # written by nwg-displays
 ├── quickshell/
 │   ├── shell.qml                   # entry point
 │   ├── Theme.qml                   # tokens (colors, radii, blur, anim)
 │   ├── bars/
 │   │   ├── TopBar.qml              # hover-reveal, waveform when playing
-│   │   └── SideBar.qml             # workspaces + apps + sysmon + power
-│   ├── widgets/
-│   │   ├── Clock.qml
-│   │   ├── Calendar.qml
-│   │   ├── Weather.qml             # wttr.in fetch every 15min
-│   │   ├── MediaPlayer.qml         # MPRIS
-│   │   ├── Notifications.qml       # DBus listener + popup stack
-│   │   ├── SystemMonitor.qml       # /proc/stat, /proc/meminfo, nvidia-smi/radeontop
-│   │   ├── AppDock.qml             # configured via dock.json
-│   │   ├── QuickSettings.qml       # wifi/bt/vol/bri/dnd/dark
-│   │   └── PowerFlyout.qml         # lock/signout/suspend/reboot/poweroff
+│   │   ├── SideBar.qml             # workspaces + apps + sysmon + power
+│   │   └── Waveform.qml            # cava-driven animated bars
 │   ├── overlays/
-│   │   ├── LockScreen.qml          # transparent, time center, widgets bottom
-│   │   ├── Launcher.qml            # OR delegate to fuzzel via process
-│   │   └── OSD.qml                 # vol/bri overlay
-│   ├── services/
-│   │   ├── Mpris.qml
-│   │   ├── Network.qml
-│   │   ├── Audio.qml
-│   │   ├── Brightness.qml
-│   │   ├── Battery.qml             # NO-OP on desktop; do not render
-│   │   └── SysStats.qml
-│   └── dock.json                   # editable app list
-├── alacritty/
-│   └── alacritty.toml
-├── fuzzel/
-│   └── fuzzel.ini
-├── swayidle/
-│   └── config
-├── greetd/                         # /etc/greetd/config.toml actually
-└── gtk-4.0/ gtk-3.0/               # match dark theme
+│   │   ├── Launcher.qml            # Launchpad-style app grid (Mod+Space)
+│   │   └── PowerFlyout.qml         # lock/signout/suspend/reboot/poweroff (Mod+Esc)
+│   ├── services/                   # MPRIS, audio, network, sys stats
+│   └── cava.conf                   # config for the Waveform bars
+├── alacritty/alacritty.toml
+├── mako/config                     # notification daemon
+├── cava/config
+├── gtklock/                        # lock screen (Mod+L)
+├── kanshi/config                   # display profiles, started via systemd --user
+├── gtk-3.0/ gtk-4.0/               # dark theme
+├── btop/  fastfetch/               # CLI utilities
 ```
 
-Skeletons for `niri/config.kdl`, `alacritty/alacritty.toml`, `fuzzel/fuzzel.ini`,
-`swayidle/config`, `quickshell/Theme.qml`, and `quickshell/shell.qml`
-are already in this project — use them as starting points and flesh
-out the QML widgets to match the HTML mockup.
+Lock is **gtklock**, not Quickshell (WlSessionLock was unstable). Login
+is **ly** on tty1 (`/etc/ly/config.ini`), not greetd. Launcher and
+power flyout are Quickshell overlays — no fuzzel/rofi/wlogout.
+
+Skeletons for `niri/config.kdl`, `alacritty/alacritty.toml`,
+`quickshell/Theme.qml`, and `quickshell/shell.qml` are already in this
+project — use them as starting points and flesh out the QML widgets to
+match the HTML mockup.
 
 ---
 
@@ -168,24 +156,29 @@ out the QML widgets to match the HTML mockup.
 
 | Bind | Action |
 |---|---|
-| Super+Space | toggle launcher (`fuzzel` or Quickshell launcher) |
-| Super+1..9 | switch to workspace 1..9 |
-| Super+Shift+1..9 | move window to workspace |
 | Super+Return | alacritty |
-| Super+E | nautilus |
-| Super+B | chrome |
-| Super+Q | close window |
-| Super+L | lock (`quickshell lock` or `loginctl lock-session`) |
+| Super+Space | toggle Quickshell launcher (`qs ipc call launcher toggle`) |
+| Super+Escape | toggle power flyout (`qs ipc call power toggle`) |
+| Super+L | lock — `gtklock -d -c ~/.config/gtklock/config.ini` |
+| Super+W | close window |
+| Super+F | maximize column |
+| Super+Shift+F | fullscreen window |
+| Super+R | reset window height |
+| Super+Shift+B | next wallpaper |
+| Super+1..9 | switch to workspace 1..9 |
+| Super+Shift+1..3 | move window to workspace 1..3 |
+| Super+Arrow | focus column/window |
+| Super+Shift+Arrow | move column/window |
 | Print | screenshot (niri built-in interactive UI) |
-| Super+V | cliphist picker via fuzzel |
 | XF86Audio* | playerctl / wpctl |
 | XF86MonBrightness* | brightnessctl |
 
-- **Autostart** (`spawn-at-startup`): `swww-daemon`, `quickshell`,
-  `swayidle -c ~/.config/swayidle/config`, `nm-applet --indicator`,
-  `polkit-gnome-authentication-agent-1`.
-- **Wallpaper:** set via `swww img ~/.config/wallpapers/current.jpg
-  --transition-type wipe`.
+- **Autostart** (`spawn-at-startup`): `wallpaper-init` (swaybg or swww),
+  `quickshell`, `mako`, `wl-paste --watch cliphist store` (text+image),
+  `polkit-gnome-authentication-agent-1`, `xwayland-satellite`.
+  No idle daemon — lock and suspend are user-initiated only.
+- **Wallpaper:** seeded by `wallpaper-init`; cycle with `wallpaper-next`
+  (bound to Super+Shift+B).
 
 ---
 
@@ -257,8 +250,9 @@ Quickshell docs first** (`quickshell.outfoxxed.me`). Key APIs:
 - **Password field**: pill input, blurred, accent submit button.
 - **Bottom widgets** (grid 2 col, max-width 720): Weather, Now
   Playing. Subtle, no chrome dominance.
-- Wake via swayidle's `lock` trigger; idle 5min lock, 10min screen
-  off.
+- Lock is **manual only** (`Mod+L`). No idle-based auto-lock and no
+  auto display-off; the system stays awake until the user suspends or
+  powers it down via the Quickshell power flyout.
 
 ### 5.4 Notifications (`widgets/Notifications.qml`)
 
@@ -296,32 +290,27 @@ QtObject {
 
 ## 6. Lock / idle behavior
 
-```
-# ~/.config/swayidle/config
-timeout 300  'loginctl lock-session'
-timeout 600  'niri msg action power-off-monitors'
-resume       'niri msg action power-on-monitors'
-before-sleep 'loginctl lock-session'
-lock         'quickshell ipc call lock show'   # or gtklock fallback
-```
+**Idle daemon disabled by design.** The system never auto-locks and
+never auto-blanks. The only paths to a locked or sleeping machine are
+user-initiated:
+
+- `Mod+L` → `gtklock -d -c ~/.config/gtklock/config.ini`
+- Quickshell power flyout → suspend / reboot / power off via `loginctl`
+
+Do **not** re-add `swayidle` to `spawn-at-startup`. If lock-on-suspend
+is wanted later, wire it explicitly and ask the user first.
 
 ---
 
-## 7. Greetd / login
+## 7. Login manager (ly)
 
-`/etc/greetd/config.toml`:
-
-```toml
-[terminal]
-vt = 1
-
-[default_session]
-command = "tuigreet --remember --cmd niri-session"
-user = "greeter"
-```
+`ly` runs as `ly@tty1.service`. It reads installed Wayland sessions
+from `/usr/share/wayland-sessions/` — niri's session file is written
+by `modules/04-niri-stack.sh`.
 
 Niri ships a `niri-session` script; if missing, write a 3-liner that
-exports `XDG_CURRENT_DESKTOP=niri` and `exec niri`.
+exports `XDG_CURRENT_DESKTOP=niri` and `exec niri`. Do not pull in
+greetd/tuigreet/regreet — that stack was removed.
 
 ---
 
@@ -348,8 +337,8 @@ do not paper over.
 - [ ] `niri --validate ~/.config/niri/config.kdl` succeeds.
 - [ ] `quickshell -c ~/.config/quickshell/shell.qml` starts with no
       QML errors in stderr.
-- [ ] Boot → tuigreet → log in → niri session lands with wallpaper
-      visible.
+- [ ] Boot → ly greeter on tty1 → log in → niri session lands with
+      wallpaper visible.
 - [ ] Sidebar visible, workspaces respond to `Super+1..9`.
 - [ ] Hover top edge → bar drops down with 5 cells populated (time
       ticks live, weather fetched, media reflects spotify state).
@@ -357,10 +346,11 @@ do not paper over.
       music stops and not hovered.
 - [ ] App dock launches each app; running indicator appears.
 - [ ] Hover system monitor → detail popover opens, numbers update.
-- [ ] Power flyout: lock works, suspend works, reboot works (test
-      reboot LAST), poweroff works.
+- [ ] `Super+Escape` opens power flyout; Lock / Sign out / Suspend /
+      Reboot / Power off all fire (test reboot LAST).
 - [ ] `Super+L` → lock screen appears, time correct, password unlocks.
-- [ ] Idle 5min → auto-lock; 10min → screen off; mouse wakes both.
+- [ ] System never auto-locks and never auto-blanks; only `Mod+L` and
+      the power flyout change state.
 - [ ] `Print` opens niri's built-in screenshot UI; output saved to `~/Pictures/Screenshots/`.
 - [ ] Notifications: `notify-send "test"` shows popup top-right,
       auto-dismisses, appears in top bar history.
@@ -381,7 +371,7 @@ do not paper over.
 6. `mkdir -p ~/.config/wallpapers` and copy at least one image to
    `current.jpg`.
 7. `chsh -s /bin/bash` (or zsh — ask user).
-8. Reboot, log in via tuigreet → Niri.
+8. Reboot, log in via ly → Niri.
 9. Run testing checklist §9. If anything fails, **report it** — do
    not iterate silently.
 
