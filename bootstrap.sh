@@ -69,7 +69,11 @@ while [[ $# -gt 0 ]]; do
         --force-usb-secure-boot) FORCE_USB_SECURE_BOOT="true"; shift ;;
         --i-know-this-is-windows) FORCE_OVERWRITE_WINDOWS="true"; shift ;;
         --yes|-y)       ASSUME_YES="true"; shift ;;
-        -h|--help)      sed -n '2,28p' "$0"; exit 0 ;;
+        -h|--help)
+            sed -n '2,22p' "$0"
+            echo
+            echo "Full flag reference: docs/install-flags.md"
+            exit 0 ;;
         *) echo "Unknown arg: $1" >&2; exit 2 ;;
     esac
 done

@@ -54,7 +54,10 @@ while [[ $# -gt 0 ]]; do
             echo "Note: --secure-boot is a bootstrap-time flag and is ignored in rice mode." ;
             shift ;;
         -h|--help)
-            sed -n '2,18p' "$0"; exit 0 ;;
+            sed -n '2,16p' "$0"
+            echo
+            echo "Full flag reference: docs/install-flags.md"
+            exit 0 ;;
         *) echo "Unknown arg: $1" >&2; exit 2 ;;
     esac
 done

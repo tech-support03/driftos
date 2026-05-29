@@ -86,6 +86,28 @@ cd ~/arch-setup
 `install.sh` auto-detects the environment: ISO → bootstrap pipeline,
 booted system → rice modules.
 
+### Profile picker
+
+The `--profile` flag is the single most important choice. Pick once,
+and it cascades through the display layout, package selection, and
+which systemd services get enabled.
+
+| Profile    | Use when                                  | What it sets up                                                                |
+| ---------- | ----------------------------------------- | ------------------------------------------------------------------------------ |
+| `vm`       | KVM/QEMU, VirtualBox, headless test rigs  | Single 1920×1080 wildcard; guest agents auto-detected (no microcode).          |
+| `personal` | Desktop tower with multi-monitor setup    | 3-monitor topology + CPU microcode.                                            |
+| `laptop`   | Any laptop, single internal panel + dock  | Auto-fits the laptop's panel; TLP + acpid + bluetooth + lid-switch=suspend.    |
+
+**Laptop install example** — just the internal display, full power management:
+
+```bash
+./install.sh --disk /dev/nvme0n1 --user you --hostname driftos-laptop \
+             --profile laptop --target ssd --secure-boot --yes
+```
+
+See [docs/install-flags.md](docs/install-flags.md) for the complete flag
+reference, environment-variable equivalents, and recipes for each profile.
+
 ---
 
 ## Keybinds
@@ -175,45 +197,17 @@ radii, animation durations). Niri's accent reads from the same source.
 
 ---
 
-## bootstrap.sh — bare-metal flags
+## Installer flags
 
-| flag                       | env-var                  | meaning                                    |
-| -------------------------- | ------------------------ | ------------------------------------------ |
-| `--disk PATH`              | `DISK`                   | target block device (will be ERASED)       |
-| `--hostname NAME`          | `TARGET_HOSTNAME`        | hostname                                   |
-| `--user NAME`              | `TARGET_USERNAME`        | primary user (added to `wheel`)            |
-| `--timezone TZ`            | `TIMEZONE`               | e.g. `America/New_York`                    |
-| `--locale LOCALE`          | `LOCALE`                 | default `en_US.UTF-8`                      |
-| `--keymap KMAP`            | `KEYMAP`                 | default `us`                               |
-| `--profile NAME`           | `PROFILE`                | `vm` \| `personal` \| `laptop`             |
-| `--target TYPE`            | `TARGET_TYPE`            | `ssd` \| `usb` \| `auto` (default)         |
-| `--secure-boot`            | `SECURE_BOOT`            | Limine + sbctl Secure Boot setup           |
-| `--force-usb-secure-boot`  | `FORCE_USB_SECURE_BOOT`  | allow SB+USB combo (rare; see warning)     |
-| `--yes`                    | `ASSUME_YES`             | skip the "type ERASE to continue" prompt   |
-|                            | `USER_PASSWORD`          | non-interactive user password              |
-|                            | `ROOT_PASSWORD`          | non-interactive root password              |
+The full reference — every flag, every environment-variable equivalent,
+recipes for each profile — lives in
+**[docs/install-flags.md](docs/install-flags.md)**. The summary below covers
+the disk layout and target-type table since those are install-time decisions
+you can't change later without reinstalling.
 
-### Profiles
+### Disk layout
 
-| Profile    | Display layout                            | Runtime extras                                          |
-| ---------- | ----------------------------------------- | ------------------------------------------------------- |
-| `vm`       | Single virtual 1920×1080 wildcard         | —                                                       |
-| `personal` | 3-monitor topology in kanshi + niri       | —                                                       |
-| `laptop`   | Single internal panel (eDP-1/eDP/LVDS-1)  | TLP, acpid, bluetooth, lid-switch=suspend, brightness   |
-
-### Target type
-
-`--target` controls mount options and bootloader install style:
-
-| Target | ESP size | Root mount opts                | GRUB install        |
-| ------ | -------- | ------------------------------ | ------------------- |
-| `ssd`  | 1 GiB    | `noatime,discard=async`        | NVRAM entry "GRUB"  |
-| `usb`  | 512 MiB  | `noatime,nodiratime,commit=120`| `--removable` (portable to any UEFI machine via `\EFI\BOOT\BOOTX64.EFI`) |
-| `auto` | —        | reads `/sys/block/.../removable` and `lsblk TRAN`, picks ssd/usb        |
-
-`fstrim.timer` is enabled automatically on `ssd` targets.
-
-Disk layout written by `iso-stage/02-disk.sh`:
+Written by `iso-stage/02-disk.sh`:
 
 | Partition | Size  | Type   | FS    | Mount  |
 | --------- | ----- | ------ | ----- | ------ |
@@ -223,6 +217,14 @@ Disk layout written by `iso-stage/02-disk.sh`:
 
 Kernel + initramfs live on the ESP (mounted at `/boot`) because Limine reads
 them via `boot():/`.
+
+### Target type (`--target`)
+
+| Target | ESP size | Root mount opts                | GRUB install style                                                                            |
+| ------ | -------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ssd`  | 1 GiB    | `noatime,discard=async`        | NVRAM entry "GRUB"; `fstrim.timer` enabled.                                                   |
+| `usb`  | 512 MiB  | `noatime,nodiratime,commit=120`| `--removable` (portable to any UEFI machine via `\EFI\BOOT\BOOTX64.EFI`).                     |
+| `auto` | —        | (picks based on disk introspection) | Reads `/sys/block/.../removable` and `lsblk TRAN`; picks `ssd` or `usb` automatically.   |
 
 ### USB testing on a laptop (recommended before bare-metal install)
 

@@ -55,7 +55,7 @@ case "$(systemd-detect-virt 2>/dev/null)" in
     oracle) PKGS_CORE+=( virtualbox-guest-utils ) ;;
 esac
 
-# Conditional: GPU/CPU microcode only matters bare-metal.
+# Conditional: GPU/CPU microcode only matters bare-metal (personal + laptop).
 PKGS_BAREMETAL=(
     intel-ucode amd-ucode
 )
@@ -66,8 +66,8 @@ sudo pacman -Syu --noconfirm --needed
 log "Installing core packages"
 sudo pacman -S --needed --noconfirm "${PKGS_CORE[@]}"
 
-if [[ "$PROFILE" == "personal" ]]; then
-    log "Installing microcode (bare-metal profile)"
+if [[ "$PROFILE" != "vm" ]]; then
+    log "Installing microcode (bare-metal profile: $PROFILE)"
     sudo pacman -S --needed --noconfirm "${PKGS_BAREMETAL[@]}" || true
 fi
 
