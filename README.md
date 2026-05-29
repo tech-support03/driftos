@@ -1,50 +1,144 @@
-# arch-setup — Niri Wayland desktop (driftos)
+# driftos
 
-Idempotent installer + dotfiles for a borderless, translucent, dark-mode Niri
-desktop. Caelestia/macOS/Material-You aesthetic. No Hyprland.
+A complete, opinionated Arch Linux rice for the [Niri](https://github.com/YaLTeR/niri)
+scrollable-tiling Wayland compositor. Dark-mode only, translucent surfaces,
+animated everything. Built around [Quickshell](https://quickshell.outfoxxed.me/)
+for the bars, launcher, and power flyout.
 
-This repo does two things in one tree:
-
-1. **Bare-metal install from the Arch ISO** — partitions a disk, pacstraps a
-   minimal base, configures it inside `arch-chroot`, and installs the
-   bootloader (GRUB or Limine + sbctl Secure Boot).
-2. **Rice install in the booted user session** — adds Niri, the Quickshell
-   bars/launcher/power flyout, gtklock, mako, dotfiles, wallpapers, and the
-   minimal AUR set.
-
-`install.sh` auto-detects which mode to run: if it's invoked from inside the
-Arch ISO live env it forwards to `bootstrap.sh`; otherwise it runs the rice.
+![Top-bar dashboard expanded — clock, calendar, media, weather](docs/screenshots/top-bar-dashboard.jpeg)
 
 ---
 
-## Quick start (clone-and-run from the Arch ISO)
+## What you get
 
-Boot the official Arch ISO in **UEFI mode**. At the live prompt (you'll be
-`root`):
+- **Niri** compositor with custom keybinds and slightly springy window/workspace animations
+- **Quickshell**-driven UI: hover-reveal top bar dashboard, vertical 72px side bar,
+  Launchpad-style launcher, translucent power flyout
+- **gtklock** lock screen with a pre-blurred copy of the live wallpaper
+- **mako** notifications, **cava**-driven waveform in the top bar when music plays
+- **kanshi** display profiles (vm / personal / laptop) auto-applied by `systemd --user`
+- **ly** TUI greeter on tty1 — no GUI display-manager dependency
+- **Limine + sbctl Secure Boot** option with an atomic re-sign pacman hook,
+  or plain **GRUB** for VMs / simplicity
+- One-shot installer that works either from the Arch ISO (bare-metal install)
+  or from an already-booted user session (rice-only mode)
+
+| Default desktop | System monitor popover |
+| --- | --- |
+| ![Default desktop with fastfetch](docs/screenshots/desktop.jpeg) | ![Side bar with sysmon popover](docs/screenshots/sidebar-sysmon.png) |
+
+---
+
+## Stack
+
+| Layer | Choice |
+| --- | --- |
+| Compositor | Niri (scrollable-tiling Wayland) |
+| Shell / bars / launcher / power flyout | Quickshell (QML) |
+| Lock screen | gtklock — manual only, no idle daemon |
+| Notifications | mako |
+| Wallpaper | swaybg (or swww when installed) — animated cycle via `wallpaper-next` |
+| Audio | PipeWire + WirePlumber |
+| Network | NetworkManager |
+| Bluetooth | BlueZ |
+| Terminal | alacritty |
+| Login manager | ly |
+| File manager | nautilus |
+| Display profiles | kanshi + nwg-displays |
+| Fonts | Inter + JetBrainsMono Nerd Font |
+| Icons | Papirus-Dark |
+
+No Hyprland, no waybar, no eww/ags/wofi/rofi/fuzzel. The rice is intentionally
+minimal — every package earns its place.
+
+---
+
+## Quick start
+
+### From the Arch ISO (bare-metal install)
+
+Boot the official Arch ISO in **UEFI mode**. At the live prompt (as `root`):
 
 ```bash
 # (Wi-Fi only) bring up the network first
 iwctl
 
-# get the repo
 pacman -Sy --noconfirm git
 git clone https://github.com/tech-support03/driftos.git ~/arch-setup
 cd ~/arch-setup
 
-# bare-metal install (interactive — will prompt for disk/user/passwords)
+# interactive — prompts for disk, user, passwords
 ./install.sh
 
-# or fully unattended bare-metal install with Secure Boot:
+# or fully unattended with Secure Boot
 ./install.sh --disk /dev/nvme0n1 --user arjun --hostname driftos \
              --timezone America/New_York --profile personal --secure-boot --yes
 ```
 
-After reboot, log in as your user on tty and run the rice layer:
+### From an already-installed system (rice only)
 
 ```bash
+git clone https://github.com/tech-support03/driftos.git ~/arch-setup
 cd ~/arch-setup
-./install.sh --profile personal      # same script — detects it's NOT in the ISO now
+./install.sh --profile personal   # same script — detects it's NOT on the ISO
 ```
+
+`install.sh` auto-detects the environment: ISO → bootstrap pipeline,
+booted system → rice modules.
+
+---
+
+## Keybinds
+
+| Bind | Action |
+| --- | --- |
+| `Super+Return` | alacritty |
+| `Super+Space` | toggle Quickshell launcher |
+| `Super+Escape` | toggle power flyout (Lock / Sign out / Suspend / Reboot / Power off) |
+| `Super+L` | lock (gtklock) |
+| `Super+W` | close window |
+| `Super+F` | maximize column |
+| `Super+Shift+F` | fullscreen window |
+| `Super+R` | reset window height |
+| `Super+Shift+B` | next wallpaper |
+| `Super+1..9` | switch workspace |
+| `Super+Shift+1..3` | move window to workspace |
+| `Super+Arrow` | focus column / window |
+| `Super+Shift+Arrow` | move column / window |
+| `Print` | screenshot (niri built-in picker) |
+| `XF86Audio*` | playerctl / wpctl |
+| `XF86MonBrightness*` | brightnessctl |
+
+The system **never auto-locks and never auto-blanks** — lock and suspend
+are user-initiated only.
+
+---
+
+## Customization
+
+### Pinned-app dock
+
+The dock lives in `dotfiles/quickshell/bars/SideBar.qml` — look for the
+`Column { id: dock ... }` block. Each pinned app is a one-line
+`IconButton { glyph: ...; tint: ...; onActivated: root.launch("...") }`.
+Reorder, add, or remove lines and save — Quickshell auto-reloads.
+
+### Wallpaper
+
+Drop images into `~/Pictures/Wallpapers/`. Cycle with `Super+Shift+B`
+(or run `wallpaper-next` directly). The current pick is pre-blurred into
+`~/.cache/lockscreen-bg.jpg` so gtklock always tracks the desktop.
+
+### Display layout
+
+Run `nwg-displays` for a drag-and-drop arranger; it writes
+`~/.config/niri/monitor.kdl`, which `config.kdl` includes. kanshi
+auto-applies the right profile when monitors come and go.
+
+### Colors / animations
+
+Tokens live in `dotfiles/quickshell/Theme.qml` (accent, surface alphas,
+radii, animation durations). Niri's accent reads from the same source.
 
 ---
 
@@ -52,60 +146,60 @@ cd ~/arch-setup
 
 ```
 ~/arch-setup/
-├── install.sh                     # entry point — routes to bootstrap or rice
-├── bootstrap.sh                   # ISO-side bare-metal installer
+├── install.sh                     entry point — routes to bootstrap or rice
+├── bootstrap.sh                   ISO-side bare-metal installer
 │
-├── iso-stage/                     # bare-metal install pipeline (runs from ISO)
-│   ├── 01-preflight.sh            #   UEFI/network/keyring/Setup-Mode checks
-│   ├── 02-disk.sh                 #   GPT partition + format + mount /mnt
-│   ├── 03-pacstrap.sh             #   base + kernel + bootloader pkgs
-│   ├── 04-chroot-config.sh        #   inside chroot: locale, user, NM, mkinitcpio
-│   └── 05-bootloader-chroot.sh    #   inside chroot: dispatch to grub/limine
+├── iso-stage/                     bare-metal install pipeline (runs from ISO)
+│   ├── 01-preflight.sh            UEFI / network / keyring / Setup-Mode checks
+│   ├── 02-disk.sh                 GPT partition + format + mount /mnt
+│   ├── 03-pacstrap.sh             base + kernel + bootloader pkgs
+│   ├── 04-chroot-config.sh        inside chroot: locale, user, NM, mkinitcpio
+│   └── 05-bootloader-chroot.sh    inside chroot: dispatch to grub/limine
 │
-├── modules/                       # rice-side modules (runs from user session)
-│   ├── 00-display-config.sh       #   profile-aware kanshi
-│   ├── 01-base-packages.sh        #   pacman repo packages
-│   ├── 02-yay-bootstrap.sh        #   AUR helper
-│   ├── 03-aur-packages.sh         #   niri, nwg-displays, kanshi, xwayland-satellite, spotify
-│   ├── 04-niri-stack.sh           #   xdg-portal + niri session entry
-│   ├── 05-bootloader-grub.sh      #   reused by bootstrap (chroot-safe)
-│   ├── 06-bootloader-limine.sh    #   reused by bootstrap (chroot-safe)
-│   ├── 07-services.sh             #   NetworkManager, bluetooth, seatd, ly, pipewire
-│   ├── 08-link-dotfiles.sh        #   symlink dotfiles into ~/.config
-│   └── 09-wallpapers.sh           #   five sample wallpapers (rendered by swaybg/swww)
+├── modules/                       rice-side modules (runs from user session)
+│   ├── 00-display-config.sh       profile-aware kanshi
+│   ├── 01-base-packages.sh        pacman repo packages
+│   ├── 02-yay-bootstrap.sh        AUR helper
+│   ├── 03-aur-packages.sh         niri, nwg-displays, kanshi, xwayland-satellite, spotify
+│   ├── 04-niri-stack.sh           xdg-portal + niri session entry
+│   ├── 05-bootloader-grub.sh      reused by bootstrap (chroot-safe)
+│   ├── 06-bootloader-limine.sh    reused by bootstrap (chroot-safe)
+│   ├── 07-services.sh             NetworkManager, bluetooth, seatd, ly, pipewire
+│   ├── 08-link-dotfiles.sh        symlink dotfiles into ~/.config
+│   └── 09-wallpapers.sh           five sample wallpapers (rendered by swaybg/swww)
 │
-├── dotfiles/                      # mirrors target ~/.config/* layout
-├── scripts/                       # → ~/.local/bin/<name> on install
-└── wallpapers/                    # local wallpaper cache
+├── dotfiles/                      mirrors target ~/.config/* layout
+├── scripts/                       → ~/.local/bin/<name> on install
+└── docs/screenshots/              README assets
 ```
 
 ---
 
 ## bootstrap.sh — bare-metal flags
 
-| flag                 | env-var                 | meaning                                      |
-| -------------------- | ----------------------- | -------------------------------------------- |
-| `--disk PATH`        | `DISK`                  | target block device (will be ERASED)         |
-| `--hostname NAME`    | `TARGET_HOSTNAME`       | hostname                                     |
-| `--user NAME`        | `TARGET_USERNAME`       | primary user (added to `wheel`)              |
-| `--timezone TZ`      | `TIMEZONE`              | e.g. `America/New_York`                      |
-| `--locale LOCALE`    | `LOCALE`                | default `en_US.UTF-8`                        |
-| `--keymap KMAP`      | `KEYMAP`                | default `us`                                 |
-| `--profile NAME`     | `PROFILE`               | `vm` \| `personal` \| `laptop`               |
-| `--target TYPE`      | `TARGET_TYPE`           | `ssd` \| `usb` \| `auto` (default)           |
-| `--secure-boot`      | `SECURE_BOOT`           | Limine + sbctl Secure Boot setup             |
-| `--force-usb-secure-boot` | `FORCE_USB_SECURE_BOOT` | allow SB+USB combo (rare; see warning)   |
-| `--yes`              | `ASSUME_YES`            | skip the "type ERASE to continue" prompt     |
-|                      | `USER_PASSWORD`         | non-interactive user password                |
-|                      | `ROOT_PASSWORD`         | non-interactive root password                |
+| flag                       | env-var                  | meaning                                    |
+| -------------------------- | ------------------------ | ------------------------------------------ |
+| `--disk PATH`              | `DISK`                   | target block device (will be ERASED)       |
+| `--hostname NAME`          | `TARGET_HOSTNAME`        | hostname                                   |
+| `--user NAME`              | `TARGET_USERNAME`        | primary user (added to `wheel`)            |
+| `--timezone TZ`            | `TIMEZONE`               | e.g. `America/New_York`                    |
+| `--locale LOCALE`          | `LOCALE`                 | default `en_US.UTF-8`                      |
+| `--keymap KMAP`            | `KEYMAP`                 | default `us`                               |
+| `--profile NAME`           | `PROFILE`                | `vm` \| `personal` \| `laptop`             |
+| `--target TYPE`            | `TARGET_TYPE`            | `ssd` \| `usb` \| `auto` (default)         |
+| `--secure-boot`            | `SECURE_BOOT`            | Limine + sbctl Secure Boot setup           |
+| `--force-usb-secure-boot`  | `FORCE_USB_SECURE_BOOT`  | allow SB+USB combo (rare; see warning)     |
+| `--yes`                    | `ASSUME_YES`             | skip the "type ERASE to continue" prompt   |
+|                            | `USER_PASSWORD`          | non-interactive user password              |
+|                            | `ROOT_PASSWORD`          | non-interactive root password              |
 
 ### Profiles
 
-| Profile    | Display layout                            | Runtime extras                                       |
-| ---------- | ----------------------------------------- | ---------------------------------------------------- |
-| `vm`       | Single virtual 1920×1080 wildcard         | —                                                    |
-| `personal` | 3-monitor topology in kanshi + niri       | —                                                    |
-| `laptop`   | Single internal panel (eDP-1/eDP/LVDS-1)  | TLP, acpid, bluetooth, lid-switch=suspend, brightness |
+| Profile    | Display layout                            | Runtime extras                                          |
+| ---------- | ----------------------------------------- | ------------------------------------------------------- |
+| `vm`       | Single virtual 1920×1080 wildcard         | —                                                       |
+| `personal` | 3-monitor topology in kanshi + niri       | —                                                       |
+| `laptop`   | Single internal panel (eDP-1/eDP/LVDS-1)  | TLP, acpid, bluetooth, lid-switch=suspend, brightness   |
 
 ### Target type
 
@@ -115,29 +209,9 @@ cd ~/arch-setup
 | ------ | -------- | ------------------------------ | ------------------- |
 | `ssd`  | 1 GiB    | `noatime,discard=async`        | NVRAM entry "GRUB"  |
 | `usb`  | 512 MiB  | `noatime,nodiratime,commit=120`| `--removable` (portable to any UEFI machine via `\EFI\BOOT\BOOTX64.EFI`) |
-| `auto` | —        | reads `/sys/block/.../removable` and `lsblk TRAN`, picks ssd/usb     |
+| `auto` | —        | reads `/sys/block/.../removable` and `lsblk TRAN`, picks ssd/usb        |
 
 `fstrim.timer` is enabled automatically on `ssd` targets.
-
-### USB testing on a laptop (recommended workflow before bare-metal install)
-
-1. Plug in a fast USB 3.x stick or USB-NVMe enclosure (≥ 16 GiB).
-2. Boot the Arch ISO in UEFI mode (laptop firmware boot menu → ISO USB).
-3. `pacman -Sy --noconfirm git && git clone https://github.com/tech-support03/driftos.git ~/arch-setup`
-4. `cd ~/arch-setup && ./install.sh --disk /dev/sdX --user you --profile laptop --target usb`
-   — **double-check** the disk path; on most laptops the internal SSD is
-   `/dev/nvme0n1` and the USB is `/dev/sda` or similar, but verify with
-   `lsblk -dpno NAME,SIZE,MODEL,TRAN,REM`. The installer prints disk size/model
-   in its confirmation prompt for the same reason.
-5. After install completes, reboot into the firmware boot menu and pick the
-   USB drive. The `--removable` GRUB install means it works on any UEFI
-   machine without touching laptop NVRAM.
-
-If the USB-installed system works on your hardware, redo step 4 against the
-internal SSD with `--target ssd --secure-boot`. Don't enable Secure Boot on
-the USB run — `sbctl` enrolls keys into the laptop's firmware NVRAM, which
-defeats the whole point of using a USB. The installer refuses this combo by
-default; use `--force-usb-secure-boot` only if you understand the trade-off.
 
 Disk layout written by `iso-stage/02-disk.sh`:
 
@@ -149,6 +223,25 @@ Disk layout written by `iso-stage/02-disk.sh`:
 
 Kernel + initramfs live on the ESP (mounted at `/boot`) because Limine reads
 them via `boot():/`.
+
+### USB testing on a laptop (recommended before bare-metal install)
+
+1. Plug in a fast USB 3.x stick or USB-NVMe enclosure (≥ 16 GiB).
+2. Boot the Arch ISO in UEFI mode (laptop firmware boot menu → ISO USB).
+3. `pacman -Sy --noconfirm git && git clone https://github.com/tech-support03/driftos.git ~/arch-setup`
+4. `cd ~/arch-setup && ./install.sh --disk /dev/sdX --user you --profile laptop --target usb`
+   — **double-check** the disk path; on most laptops the internal SSD is
+   `/dev/nvme0n1` and the USB is `/dev/sda` or similar. Verify with
+   `lsblk -dpno NAME,SIZE,MODEL,TRAN,REM`.
+5. After install completes, reboot into the firmware boot menu and pick the
+   USB drive. The `--removable` GRUB install means it works on any UEFI
+   machine without touching laptop NVRAM.
+
+If the USB-installed system works on your hardware, redo step 4 against the
+internal SSD with `--target ssd --secure-boot`. Don't enable Secure Boot on
+the USB run — `sbctl` enrolls keys into the laptop's firmware NVRAM, which
+defeats the whole point of using a USB. The installer refuses this combo by
+default; use `--force-usb-secure-boot` only if you understand the trade-off.
 
 ---
 
@@ -229,49 +322,6 @@ Both paths land in the same end state. Path A is one fewer reboot.
 
 ---
 
-## Toggle effects
-
-| Toggle               | Off (default)                              | On                                              |
-| -------------------- | ------------------------------------------ | ----------------------------------------------- |
-| `--secure-boot`      | GRUB on EFI (or BIOS) — VM-friendly        | Limine + sbctl + BLAKE2B + pacman re-sign hook  |
-| `--profile vm`       | Single virtual 1920×1080 kanshi wildcard   | —                                               |
-| `--profile personal` | —                                          | 3-monitor topology in `niri/config.kdl` + kanshi|
-
-`nwg-displays` is installed in either case so you can drag screens around
-visually after install (writes `~/.config/niri/monitor.kdl`, which
-`config.kdl` includes).
-
----
-
-## Editing the pinned-app dock
-
-The dock lives in `dotfiles/quickshell/bars/SideBar.qml` — look for the
-`Column { id: dock ... }` block. Each pinned app is a one-line
-`IconButton { glyph: ...; tint: ...; onActivated: root.launch("...") }`.
-Reorder, add, or remove lines and save — Quickshell auto-reloads.
-
----
-
-## Lock screen, top bar, side bar — behavior summary
-
-- **Lock screen** (`gtklock`, bound to `Mod+L`): translucent blurred copy
-  of the current wallpaper (cached at `~/.cache/lockscreen-bg.jpg`,
-  regenerated by `wallpaper-init` / `wallpaper-next`), centered clock,
-  password field. **Manual only — no idle daemon, no auto-blank.**
-- **Top bar** (Quickshell `bars/TopBar.qml`): a thin hover strip at rest.
-  When media plays, the centered cava-driven waveform shows. Hover the
-  top edge to drop the full dashboard with Time / Calendar / Media /
-  Weather / Notifications cells.
-- **Side bar** (Quickshell `bars/SideBar.qml`): vertical, left-anchored,
-  72px pill. Workspaces, app dock, system monitor (with hover popover),
-  clock, and quick settings.
-- **Launcher** (Quickshell `overlays/Launcher.qml`, bound to `Mod+Space`):
-  Launchpad-style icon grid with fuzzy search.
-- **Power flyout** (Quickshell `overlays/PowerFlyout.qml`, bound to
-  `Mod+Escape`): Lock / Sign out / Suspend / Reboot / Power off.
-
----
-
 ## Where things live after install
 
 | Item                       | Path                                            |
@@ -310,10 +360,12 @@ Reorder, add, or remove lines and save — Quickshell auto-reloads.
 - **`bootstrap.sh` must run as root from the ISO**; `install.sh` (rice mode)
   must run as a normal user with sudo.
 
+---
+
 ## Troubleshooting
 
-If Niri shows a black screen or fails to render after login, run from a tty
-(Ctrl+Alt+F2):
+If Niri shows a black screen or fails to render after login, drop to a tty
+(`Ctrl+Alt+F2`) and run:
 
 ```bash
 gpu-check
@@ -322,5 +374,5 @@ gpu-check
 It walks the virtualization detection → DRM device → kernel driver → OpenGL
 renderer → EGL/GBM → niri config-parse pipeline and prints exactly which step
 is broken. The most common failure modes (in order) are: VMware host (see
-above), missing mesa/mesa-utils, and a kernel driver other than the expected
+above), missing mesa packages, and a kernel driver other than the expected
 one for the platform.
