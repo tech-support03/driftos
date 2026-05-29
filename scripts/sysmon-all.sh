@@ -89,6 +89,20 @@ if [[ -n "$amd_card" ]]; then
     gpu_model="$(printf '%s' "$raw_name" | sed -nE 's/.*\[Radeon[[:space:]]+([^]]*)\].*/\1/p')"
     [[ -z "$gpu_model" ]] && gpu_model="$(printf '%s' "$raw_name" | sed -E 's/[[:space:]]+\(rev [^)]+\)//; s/^[[:space:]]+|[[:space:]]+$//g')"
 
+    # When one PCI device ID covers multiple SKUs (e.g. Navi 32 reports
+    # "RX 7700 XT / 7800 XT") and the board's subsystem ID isn't in pci.ids,
+    # lspci can't pick the real SKU. fastfetch carries the AMD device →
+    # marketing-name table internally, so defer to it for disambiguation.
+    if [[ "$gpu_model" == *"/"* ]] && command -v fastfetch >/dev/null 2>&1; then
+        # fastfetch's config loader rejects /dev/fd/* from process
+        # substitution, so feed the one-off config on stdin via `-c -`.
+        ff_name="$(printf '%s' '{"logo":"none","modules":[{"type":"gpu","detectionMethod":"pci","format":"{name}"}]}' \
+            | fastfetch -c - 2>/dev/null \
+            | grep -iE 'Radeon|GeForce' | head -n1 \
+            | sed -E 's/^GPU [0-9]+: //; s/^(AMD |NVIDIA |Intel )?(Radeon |GeForce )?//')"
+        [[ -n "$ff_name" ]] && gpu_model="$ff_name"
+    fi
+
     # Find the hwmon entry whose device symlink matches this PCI slot.
     for h in /sys/class/hwmon/hwmon*; do
         [[ "$(cat "$h/name" 2>/dev/null)" == "amdgpu" ]] || continue
