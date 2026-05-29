@@ -83,11 +83,16 @@ if [[ -n "$amd_card" ]]; then
     pci="$(basename "$(readlink -f "$amd_card/device")")"        # e.g. 0000:03:00.0
     gpu_pct="$(cat "$amd_card/device/gpu_busy_percent" 2>/dev/null || echo 0)"
 
-    # Friendly model name from lspci, trimmed to the "RX 7800 XT" tail.
+    # Friendly model name from lspci. The bracketed marketing string is what
+    # users recognise (e.g. "Radeon RX 7800 XT"); prepend "AMD " so the row
+    # reads like the CPU row ("AMD Ryzen 7 7800X3D").
     raw_name="$(lspci -mm 2>/dev/null | awk -v p="${pci#0000:}" '$1==p { for(i=4;i<=NF;i++) printf "%s ", $i; print "" }' | tr -d '"')"
-    # Common shapes: "Navi 32 [Radeon RX 7800 XT]"  →  "RX 7800 XT"
-    gpu_model="$(printf '%s' "$raw_name" | sed -nE 's/.*\[Radeon[[:space:]]+([^]]*)\].*/\1/p')"
-    [[ -z "$gpu_model" ]] && gpu_model="$(printf '%s' "$raw_name" | sed -E 's/[[:space:]]+\(rev [^)]+\)//; s/^[[:space:]]+|[[:space:]]+$//g')"
+    inner="$(printf '%s' "$raw_name" | sed -nE 's/.*\[(Radeon[[:space:]]+[^]]*)\].*/\1/p')"
+    if [[ -n "$inner" ]]; then
+        gpu_model="AMD $inner"
+    else
+        gpu_model="$(printf '%s' "$raw_name" | sed -E 's/[[:space:]]+\(rev [^)]+\)//; s/^[[:space:]]+|[[:space:]]+$//g')"
+    fi
 
     # When one PCI device ID covers multiple SKUs (e.g. Navi 32 reports
     # "RX 7700 XT / 7800 XT") and the board's subsystem ID isn't in pci.ids,
@@ -99,7 +104,7 @@ if [[ -n "$amd_card" ]]; then
         ff_name="$(printf '%s' '{"logo":"none","modules":[{"type":"gpu","detectionMethod":"pci","format":"{name}"}]}' \
             | fastfetch -c - 2>/dev/null \
             | grep -iE 'Radeon|GeForce' | head -n1 \
-            | sed -E 's/^GPU [0-9]+: //; s/^(AMD |NVIDIA |Intel )?(Radeon |GeForce )?//')"
+            | sed -E 's/^GPU [0-9]+: //')"
         [[ -n "$ff_name" ]] && gpu_model="$ff_name"
     fi
 
