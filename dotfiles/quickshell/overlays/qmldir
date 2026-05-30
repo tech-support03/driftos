@@ -1,3 +1,4 @@
 module overlays
 Launcher 1.0 Launcher.qml
 PowerFlyout 1.0 PowerFlyout.qml
+NetworkFlyout 1.0 NetworkFlyout.qml

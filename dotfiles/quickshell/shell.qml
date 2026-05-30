@@ -30,4 +30,8 @@ ShellRoot {
     // Power menu (lock / sign out / suspend / reboot / power off). Triggered
     // via `qs ipc call power toggle` (wired to Mod+Escape in niri).
     Overlays.PowerFlyout { }
+
+    // Network manager (status / wifi toggle / scan / connect). Triggered via
+    // `qs ipc call network toggle` (wired to the SideBar network button).
+    Overlays.NetworkFlyout { }
 }

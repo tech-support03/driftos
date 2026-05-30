@@ -15,6 +15,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import "../services" as Services
 
 Scope {
     id: root
@@ -307,6 +308,15 @@ Scope {
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
                     }
+                }
+
+                // Network status — glyph swaps wifi⇄ethernet from the Network
+                // service; click opens the manager flyout (qs ipc → network).
+                IconButton {
+                    glyph: Services.Network.glyph || "󰤯"
+                    tint: Services.Network.connected ? "#a5d8ff"
+                         : Services.Network.wifiEnabled ? "#8e8e96" : "#6b7280"
+                    onActivated: root.launchShell("qs ipc call network toggle")
                 }
 
                 IconButton {

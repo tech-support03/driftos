@@ -1,3 +1,4 @@
 module Services
 singleton Weather 1.0 Weather.qml
 singleton SysStats 1.0 SysStats.qml
+singleton Network 1.0 Network.qml
