@@ -126,6 +126,11 @@ Scope {
             required property var modelData
             screen: modelData
 
+            // Per-monitor UI scale: 1.0 on 1440px-tall (and taller) screens,
+            // shrinking on shorter ones (~0.8 at 1080p) so the fixed-size top /
+            // dock / bottom groups don't collide on lower-resolution monitors.
+            readonly property real ui: Math.max(0.66, Math.min(1.0, height / 1350))
+
             anchors { left: true; top: true; bottom: true }
             // Reserve the pill width plus the left-edge gap so windows don't
             // hug the screen edge underneath the floating sidebar.
@@ -169,10 +174,11 @@ Scope {
                 // ---- top: archlogo + workspaces -----------------------------
                 Column {
                     id: topCol
+                    property real ui: win.ui
                     anchors.top: parent.top
-                    anchors.topMargin: 10
+                    anchors.topMargin: 10 * win.ui
                     anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 10
+                    spacing: 10 * win.ui
                     width: parent.width - 12
 
                     IconButton {
@@ -184,7 +190,7 @@ Scope {
                     // Per-output workspace dots
                     Column {
                         anchors.horizontalCenter: parent.horizontalCenter
-                        spacing: 7
+                        spacing: 7 * win.ui
                         Repeater {
                             model: {
                                 const out = []
@@ -199,12 +205,12 @@ Scope {
                             delegate: Item {
                                 required property var modelData
                                 width: 14
-                                height: 18
+                                height: 18 * win.ui
 
                                 Rectangle {
                                     anchors.centerIn: parent
                                     width: modelData.is_focused ? 4 : 6
-                                    height: modelData.is_focused ? 16 : 6
+                                    height: (modelData.is_focused ? 16 : 6) * win.ui
                                     radius: width / 2
                                     color: modelData.is_focused ? "#c4b5fd"
                                           : modelData.is_active ? Qt.rgba(1, 1, 1, 0.55)
@@ -226,9 +232,10 @@ Scope {
                 // ---- middle: app dock + launcher -----------------------------
                 Column {
                     id: dock
+                    property real ui: win.ui
                     anchors.verticalCenter: parent.verticalCenter
                     anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: 4
+                    spacing: 4 * win.ui
                     width: parent.width - 12
 
                     IconButton { glyph: "\uF268";   tint: "#f87171"; onActivated: root.launch("google-chrome-stable") }
@@ -250,14 +257,16 @@ Scope {
             // clipped by the sidebar pill.
             Column {
                 id: sysmonStack
+                property real ui: win.ui
                 x: root.edgeGap + (root.sidebarW - width) / 2
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 14 + root.edgeGap
+                anchors.bottomMargin: 14 * win.ui + root.edgeGap
                 width: root.sidebarW - 16
-                spacing: 10
+                spacing: 10 * win.ui
 
                 SystemMonitor {
                     id: sysmon
+                    ui: win.ui
                     pillWidth: root.sidebarW - 16
                     popoverWidth: 380
                     popoverGap: 12
@@ -267,7 +276,7 @@ Scope {
                 Rectangle {
                     id: clockPill
                     width: parent.width
-                    height: 56
+                    height: 56 * win.ui
                     radius: 14
                     color: Qt.rgba(1, 1, 1, clockHover.hovered ? 0.07 : 0.04)
                     border.color: Qt.rgba(1, 1, 1, 0.06)
@@ -286,7 +295,7 @@ Scope {
                             text: root.timeStr
                             color: "#e5e7eb"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 18
+                            font.pixelSize: 18 * win.ui
                             font.weight: Font.DemiBold
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
@@ -294,7 +303,7 @@ Scope {
                             text: root.meridiemStr
                             color: "#8e8e96"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 8
+                            font.pixelSize: 8 * win.ui
                             font.weight: Font.Medium
                             font.letterSpacing: 1.0
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -303,7 +312,7 @@ Scope {
                             text: root.dateStr
                             color: "#8e8e96"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 9
+                            font.pixelSize: 9 * win.ui
                             font.letterSpacing: 0.5
                             anchors.horizontalCenter: parent.horizontalCenter
                         }
@@ -422,9 +431,12 @@ Scope {
         signal scrolledUp()
         signal scrolledDown()
 
+        // `ui` inherits the per-monitor scale from the parent column (topCol /
+        // dock / sysmonStack each expose it); falls back to 1.0 if absent.
+        property real ui: (parent && parent.ui !== undefined) ? parent.ui : 1.0
         width: root.sidebarW - 12
-        height: 48
-        radius: 14
+        height: 48 * ui
+        radius: 14 * ui
         color: Qt.rgba(1, 1, 1, hh.hovered ? 0.08 : 0.0)
         scale: tap.pressed ? 0.92 : (hh.hovered ? 1.05 : 1.0)
         antialiasing: true
@@ -437,7 +449,7 @@ Scope {
             text: btn.glyph
             color: btn.tint
             font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 24
+            font.pixelSize: 24 * btn.ui
         }
 
         HoverHandler { id: hh; cursorShape: Qt.PointingHandCursor }

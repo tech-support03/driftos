@@ -20,6 +20,7 @@ Item {
     property int pillWidth: 56
     property int popoverWidth: 380
     property int popoverGap: 10            // px between pill and popover
+    property real ui: 1.0                  // per-monitor scale (set by SideBar)
 
     // Y offset of the popover relative to this Item's origin (for the mask)
     readonly property int popoverLocalY: popover.y
@@ -69,7 +70,7 @@ Item {
         x: 0
         y: 0
         width: root.pillWidth
-        implicitHeight: pillCol.implicitHeight + 18
+        implicitHeight: pillCol.implicitHeight + 18 * root.ui
         radius: 16
         color: Qt.rgba(1, 1, 1, pillHover.hovered ? 0.07 : 0.04)
         border.color: Qt.rgba(1, 1, 1, 0.06)
@@ -82,7 +83,7 @@ Item {
         Column {
             id: pillCol
             anchors.centerIn: parent
-            spacing: 8
+            spacing: 8 * root.ui
             width: parent.width - 12
 
             Repeater {
@@ -94,7 +95,7 @@ Item {
                 ]
                 delegate: Item {
                     width: pillCol.width
-                    height: 26
+                    height: 26 * root.ui
 
                     Text {
                         id: glyph
@@ -103,7 +104,7 @@ Item {
                         text: modelData.glyph
                         color: modelData.c
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 17
+                        font.pixelSize: 17 * root.ui
                     }
 
                     Rectangle {
@@ -134,10 +135,10 @@ Item {
                         text: modelData.pct
                         color: "#e5e7eb"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 12
+                        font.pixelSize: 12 * root.ui
                         font.weight: Font.Medium
                         horizontalAlignment: Text.AlignRight
-                        width: 18
+                        width: 18 * root.ui
                     }
                 }
             }
