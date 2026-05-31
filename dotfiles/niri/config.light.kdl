@@ -1,0 +1,82 @@
+// =============================================================================
+//  config.light.kdl — LIGHT visual profile (2014 MacBook Air, 4GB, Intel HD 5000).
+//  Concatenated AFTER config.base.kdl by `rice-profile light`. Mirrors the
+//  structure of config.full.kdl (shared layout fields duplicated — niri can't
+//  merge a partial layout block) but flips the three real GPU/CPU savings:
+//
+//    1. shadow OFF      — per-window blurred shadow passes are expensive.
+//    2. windows OPAQUE  — no per-pixel alpha blend of every terminal/dialog.
+//    3. animations cheap — short fixed durations, NOT continuous springs (a
+//                          spring re-simulates every frame until it settles).
+//
+//  Windows still animate (the spec wants motion everywhere) — just briefly, so
+//  nothing runs a sustained simulation. fastfetch-popup keeps open-floating
+//  (behaviour, not cosmetics); it only loses its translucency.
+// =============================================================================
+layout {
+    gaps 10
+    center-focused-column "never"
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        proportion 1.0
+    }
+    default-column-width { proportion 0.5; }
+
+    focus-ring {
+        off
+    }
+    border {
+        off
+    }
+    // Shadows off — biggest single compositor saving on Intel HD 5000.
+    shadow {
+        off
+    }
+
+    struts {
+        left   0
+        right  0
+        top    0
+        bottom 0
+    }
+}
+
+// Cheap, short, fixed-duration animations (no continuous spring simulation).
+animations {
+    slowdown 1.0
+    workspace-switch {
+        duration-ms 130
+        curve "ease-out-quad"
+    }
+    horizontal-view-movement {
+        duration-ms 130
+        curve "ease-out-quad"
+    }
+    window-open {
+        duration-ms 120
+        curve "ease-out-quad"
+    }
+    window-close {
+        duration-ms 100
+        curve "ease-out-quad"
+    }
+    config-notification-open-close { off; }
+}
+
+// Opaque terminals & dialogs — no alpha blend.
+window-rule {
+    match app-id="Alacritty"
+    opacity 1.0
+}
+window-rule {
+    match app-id="fastfetch-popup"
+    open-floating true
+    opacity 1.0
+    geometry-corner-radius 18
+}
+window-rule {
+    match app-id="org.gnome.Calculator"
+    opacity 1.0
+}

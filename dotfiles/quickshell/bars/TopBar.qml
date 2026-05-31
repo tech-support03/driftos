@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Mpris
+import "../services" as Services
 
 // Caelestia-style top bar: invisible at rest, a wide top-center hover target
 // expands into a dashboard card. While media plays it shows a waveform that
@@ -100,10 +101,13 @@ Scope {
     }
 
     // ---- cava waveform (only runs while media is playing) -------------------
+    // Skipped entirely in the light profile: spawning cava + driving a 30fps
+    // animated bar set is the single most expensive idle cost on Intel HD 5000,
+    // and it's pure eye-candy. The rest of the top-bar dashboard is unaffected.
     property var bars: []
     Process {
         id: cavaProc
-        running: root.mediaActive
+        running: root.mediaActive && !Services.Profile.light
         command: ["sh", "-c", "cava -p ~/.config/quickshell/cava.conf"]
         stdout: SplitParser {
             onRead: line => {
@@ -129,7 +133,7 @@ Scope {
     Timer {
         interval: 33  // ~30 fps
         repeat: true
-        running: root.mediaActive && !root.cavaHasSignal
+        running: root.mediaActive && !root.cavaHasSignal && !Services.Profile.light
         onTriggered: {
             root.simT += 0.033
             const t = root.simT
@@ -169,8 +173,11 @@ Scope {
             WlrLayershell.layer: WlrLayer.Top
 
             // 0 = hidden, 1 = floating waveform, 2 = expanded dashboard
+            // Light profile has no floating-waveform state (mode 1) — the bar is
+            // simply hidden at rest and still expands to the full dashboard (mode
+            // 2) on hover, so nothing is lost but the animated waveform strip.
             readonly property int mode: (hover.hovered || cardHover.hovered)
-                                        ? 2 : (root.mediaActive ? 1 : 0)
+                                        ? 2 : ((root.mediaActive && !Services.Profile.light) ? 1 : 0)
 
             readonly property real cardW: mode === 2 ? 1000
                                         : mode === 1 ? wave.implicitWidth + 48

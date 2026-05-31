@@ -7,9 +7,10 @@
 //
 // Modules, top → bottom:
 //   archlogo · workspace dots (per output) · app dock · launcher
-//   SystemMonitor · clock pill · volume · power
+//   SystemMonitor · clock pill · network · volume · battery · power
 //
-// Per CLAUDE.md: no battery indicator.
+// Battery pill is laptop-only: Services.Battery self-gates on a real BAT*
+// node, so the desktop install keeps CLAUDE.md's "no battery indicator".
 
 import QtQuick
 import Quickshell
@@ -166,7 +167,8 @@ Scope {
                 y: root.edgeGap
                 width: root.sidebarW
                 height: parent.height - 2 * root.edgeGap
-                color: Qt.rgba(0.055, 0.058, 0.082, 0.78)
+                // Opaque in the light profile (no translucency to composite).
+                color: Qt.rgba(0.055, 0.058, 0.082, Services.Profile.light ? 1.0 : 0.78)
                 radius: 22
                 border.color: Qt.rgba(1, 1, 1, 0.05)
                 border.width: 1
@@ -238,7 +240,11 @@ Scope {
                     spacing: 4 * win.ui
                     width: parent.width - 12
 
-                    IconButton { glyph: "\uF268";   tint: "#f87171"; onActivated: root.launch("google-chrome-stable") }
+                    IconButton {
+                        glyph: Services.Profile.light ? "\uF269" : "\uF268"
+                        tint:  Services.Profile.light ? "#fb923c" : "#f87171"
+                        onActivated: root.launch(Services.Profile.light ? "firefox" : "google-chrome-stable")
+                    }
                     IconButton { glyph: "\uF1BC";   tint: "#4ade80"; onActivated: root.launch("spotify") }
                     IconButton { glyph: "\uF120";   tint: "#d8b4fe"; onActivated: root.launch("alacritty") }
                     IconButton { glyph: "󰙯";  tint: "#a5b4fc"; onActivated: root.launch("discord") }
@@ -337,10 +343,56 @@ Scope {
                     onScrolledDown: root.bumpVolume("2%-")
                 }
 
+                // Battery \u2014 laptop only. Self-gates on a real BAT* node so the
+                // desktop install keeps the spec's "no battery indicator". Glyph
+                // tier + percent always shown; tint warns on low / charging.
+                Rectangle {
+                    id: battPill
+                    visible: Services.Battery.present
+                    width: parent.width
+                    height: 50 * win.ui
+                    radius: 14
+                    color: Qt.rgba(1, 1, 1, battHover.hovered ? 0.07 : 0.04)
+                    border.color: Qt.rgba(1, 1, 1, 0.06)
+                    border.width: 1
+                    Behavior on color { ColorAnimation { duration: 160 } }
+                    HoverHandler { id: battHover; cursorShape: Qt.PointingHandCursor }
+                    // Click opens the same flyout as the power button below.
+                    TapHandler { onTapped: root.launchShell("qs ipc call power toggle") }
+
+                    readonly property color accentTint: Services.Battery.low ? "#f43f5e"
+                                                       : Services.Battery.charging ? "#4ade80"
+                                                       : "#e5e7eb"
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 1
+
+                        Text {
+                            text: Services.Battery.glyph
+                            color: battPill.accentTint
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 19 * win.ui
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            Behavior on color { ColorAnimation { duration: 160 } }
+                        }
+                        Text {
+                            text: Services.Battery.percent + "%"
+                            color: battPill.accentTint
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 11 * win.ui
+                            font.weight: Font.DemiBold
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            Behavior on color { ColorAnimation { duration: 160 } }
+                        }
+                    }
+                }
+
                 IconButton {
                     glyph: "\uF011"
                     tint: "#f43f5e"
-                    onActivated: root.launchShell("power-menu")
+                    // Same flyout as Mod+Escape (PowerFlyout's "power" IPC).
+                    onActivated: root.launchShell("qs ipc call power toggle")
                 }
             }
 

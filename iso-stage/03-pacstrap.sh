@@ -18,15 +18,32 @@ BASE_PKGS=(
     bash-completion
 )
 
-# Bootloader packages depend on the toggle.
+# Bootloader packages depend on the toggle AND the target type.
 if [[ "$SECURE_BOOT" == "true" ]]; then
-    BASE_PKGS+=( limine efibootmgr sbctl )
+    if [[ "${TARGET_TYPE:-ssd}" == "usb" ]]; then
+        # USB / removable Secure Boot = shim + GRUB + MOK. NEVER limine/sbctl:
+        # sbctl enroll-keys rewrites the host firmware's db and trips BitLocker
+        # (PCR 7) on any Windows machine the stick is plugged into (CLAUDE.md §11).
+        # shimx64.efi/mmx64.efi themselves are staged from the host (AUR
+        # shim-signed) by bootstrap.sh — they can't be pacstrapped.
+        BASE_PKGS+=( grub efibootmgr dosfstools mtools sbsigntools mokutil )
+    else
+        BASE_PKGS+=( limine efibootmgr sbctl )
+    fi
 else
     if [[ "$IS_UEFI" == "true" ]]; then
         BASE_PKGS+=( grub efibootmgr os-prober )
     else
         BASE_PKGS+=( grub )
     fi
+fi
+
+# USB sticks are portable across machines — including a 2014 MacBook Air whose
+# Broadcom BCM4360 needs the out-of-tree `wl` driver (broadcom-wl-dkms, AUR,
+# staged by bootstrap.sh). DKMS + matching kernel headers must be in the base so
+# that driver builds at install time and rebuilds on every kernel update.
+if [[ "${TARGET_TYPE:-ssd}" == "usb" ]]; then
+    BASE_PKGS+=( dkms linux-headers )
 fi
 
 # Microcode is harmless to include — installer picks the active CPU's loader.

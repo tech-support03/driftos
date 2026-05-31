@@ -239,8 +239,14 @@ Quickshell docs first** (`quickshell.outfoxxed.me`). Key APIs:
      without a password. (`loginctl` has NO power verbs — only session/
      seat management — so don't use it for poweroff/reboot/suspend.)
 
-- **No battery indicator anywhere.** This is a desktop. Hide the
-  battery service entirely (`Battery.qml` exists but `enabled: false`).
+- **Battery widget is hardware-gated: laptop shows it, desktop hides it.**
+  The sidebar battery pill (between the volume and power buttons) is driven by
+  the `Services.Battery` singleton, which polls `/sys/class/power_supply/BAT*`
+  and exposes `present`. The pill is `visible: Services.Battery.present`, so it
+  appears automatically on a laptop install and stays hidden on the desktop —
+  one set of dotfiles, no profile flag. **Do not hardcode it on or off**; the
+  `present` gate is the single source of truth. The desktop must never render a
+  battery indicator.
 
 ### 5.3 LockScreen (`overlays/LockScreen.qml`)
 
@@ -357,7 +363,8 @@ do not paper over.
 - [ ] `Print` opens niri's built-in screenshot UI; output saved to `~/Pictures/Screenshots/`.
 - [ ] Notifications: `notify-send "test"` shows popup top-right,
       auto-dismisses, appears in top bar history.
-- [ ] **No** battery widget visible anywhere.
+- [ ] Battery widget: **visible on laptop** (BAT* present, shows level +
+      percent), **hidden on desktop** (no BAT* node).
 - [ ] Terminal (alacritty) is translucent; Chrome / Spotify / Steam are
       opaque.
 - [ ] All hover/click states animate (no instant snap anywhere).
@@ -387,7 +394,76 @@ do not paper over.
   blur shaders) until everything in §9 passes.
 - **Don't run `pacman -R`** on anything not installed by this spec.
 - **Don't overwrite** `/etc/*` files without showing the diff first.
+- **Secure Boot depends on the target type — never use the wrong one:**
+  - **Bare-metal installs** (`TARGET_TYPE=ssd`): the `sbctl` path is OK —
+    it enrolls our own keys into the firmware's `db` (Limine + `sbctl
+    enroll-keys --microsoft`). This requires firmware **Setup Mode** and
+    rewrites **PCR 7**.
+  - **USB / removable installs** (`TARGET_TYPE=usb`): **MUST use the shim +
+    MOK chain. Never run `sbctl enroll-keys` on a USB target.** A portable
+    stick gets plugged into machines we don't own; enrolling keys into `db`
+    (or clearing PK for Setup Mode) changes PCR 7 and **triggers BitLocker
+    recovery** on any dual-boot/Windows host. shim (Microsoft-signed) +
+    a MOK enrolled once via MokManager keeps Secure Boot **enabled** and
+    leaves `db`/PK/KEK **untouched**, so BitLocker is never disturbed.
+  - Rule of thumb: `TARGET_TYPE=usb` ⇒ shim+MOK; `TARGET_TYPE=ssd` ⇒ sbctl.
 - **When in doubt → stop and ask.**
+
+---
+
+## 12. Visual profiles — `full` / `light`
+
+The rice runs in one of two visual profiles, switchable **live, no logout**.
+`full` is the default daily-driver look. `light` is for the **2014 MacBook Air
+(4GB, Intel HD 5000)** — purely cosmetic/perf, **no widget is removed**.
+
+- **Single source of truth:** the one-word file `~/.config/rice/profile`
+  (`full` | `light`).
+- **One command:** `rice-profile [status|full|light|toggle]`. **`Mod+Shift+P`**
+  is bound to `rice-profile toggle`. (`scripts/rice-profile.sh` →
+  `/usr/local/bin/rice-profile`.)
+- **Boot seed:** `rice-profile-seed` runs at niri startup (first
+  `spawn-at-startup`, before quickshell). It reads `rice.profile=` from the
+  kernel cmdline — so the USB's GRUB entries (`…full` / `…light`, written by
+  `modules/10-bootloader-shim-mok.sh`) pick the profile automatically. With no
+  cmdline directive it respects the saved choice, else defaults to `full`.
+
+**What `light` changes (and nothing else):**
+
+| Piece | full | light |
+|---|---|---|
+| niri window translucency (alacritty/dialogs) | opacity 0.92–0.95 | **opaque** |
+| niri shadows | soft drop shadows | **off** |
+| niri animations | springs (continuous sim) | **short fixed-duration curves** |
+| TopBar cava waveform | on while media plays | **skipped** (no cava subproc / 30fps loop) |
+| SystemMonitor poll | 1.5s | **5s** (popover still kept) |
+| Quickshell sidebar surface | translucent (α 0.78) | **opaque** |
+
+Everything else — launcher, flyouts, sysmon detail popover, clocks, workspaces
+— is identical. Windows still animate in light (spec wants motion everywhere);
+they just don't run a sustained spring simulation.
+
+**Mechanics — niri config is GENERATED, not symlinked.** niri's `layout {}` and
+`animations {}` are **single nodes**; having them twice (or via `include`) is a
+hard parse error (`duplicate node 'layout'`). So:
+
+```
+dotfiles/niri/config.base.kdl    # shared: inputs, outputs, binds, autostart, env
+dotfiles/niri/config.full.kdl    # full:  layout{+shadow} + animations + opacity rules
+dotfiles/niri/config.light.kdl   # light: layout{shadow off} + cheap anims + opaque
+```
+
+`rice-profile` concatenates `config.base.kdl` + `config.<profile>.kdl` →
+`~/.config/niri/config.kdl`, **validates with `niri validate` before swapping it
+in** (a broken fragment can never strand the session), then pokes
+`niri msg action load-config-file`. The Quickshell half reacts off the
+`Services.Profile` singleton (`services/Profile.qml`), which watches
+`~/.config/rice/profile` and re-flows the bars with no restart.
+
+> When editing niri config, **edit the fragments**, never the generated
+> `config.kdl`. After editing, run `rice-profile <profile>` to regenerate.
+> Keep shared `layout` fields (gaps/widths/struts/border) in sync across both
+> fragments — niri can't merge a partial `layout` block.
 
 The visual is in `arch rice v5 daily-driver.html`. The user has tuned
 it. Match its hover/animation/translucency behavior beat-for-beat in

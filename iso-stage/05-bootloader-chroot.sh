@@ -31,8 +31,16 @@ export -f yay
 
 export IS_CHROOT=1
 
-if [[ "${SECURE_BOOT:-false}" == "true" ]]; then
-    log "Installing Limine + sbctl (Secure Boot path)"
+if [[ "${SECURE_BOOT:-false}" == "true" && "${TARGET_TYPE:-ssd}" == "usb" ]]; then
+    # USB / removable Secure Boot → shim + MOK. NEVER sbctl here: enrolling keys
+    # into the host's firmware db changes PCR 7 and triggers BitLocker recovery
+    # on any Windows host the stick is plugged into (CLAUDE.md §11).
+    log "Installing shim + GRUB + MOK (removable Secure Boot path)"
+    bash "$MODULES_DIR/10-bootloader-shim-mok.sh" || {
+        warn "shim+MOK module reported errors. Inspect output above. Install will continue."
+    }
+elif [[ "${SECURE_BOOT:-false}" == "true" ]]; then
+    log "Installing Limine + sbctl (bare-metal Secure Boot path)"
     bash "$MODULES_DIR/06-bootloader-limine.sh" || {
         warn "Limine module reported errors. Inspect output above. Install will continue."
     }

@@ -147,14 +147,15 @@ if [[ "$TARGET_TYPE" == "auto" ]]; then
     log "Auto-detected target type: $TARGET_TYPE  (override with --target ssd|usb)"
 fi
 
-# Secure Boot on a USB target writes keys to the LAPTOP firmware NVRAM (not
-# the USB itself), which defeats the point of testing on removable media.
-# Refuse unless the user explicitly overrides with --force-usb-secure-boot.
-if [[ "$TARGET_TYPE" == "usb" && "$SECURE_BOOT" == "true" && "$FORCE_USB_SECURE_BOOT" != "true" ]]; then
-    warn "USB target + Secure Boot enrolls keys into the LAPTOP firmware,"
-    warn "which affects any other OS installed on this machine. Disabling SB"
-    warn "for this run. Pass --force-usb-secure-boot to override."
-    SECURE_BOOT="false"
+# USB + Secure Boot uses the shim + MOK chain (modules/10-bootloader-shim-mok.sh),
+# which leaves the host firmware's db/KEK/PK untouched and never enters Setup Mode,
+# so it does NOT disturb BitLocker / TPM PCR 7 on any machine the stick is plugged
+# into (CLAUDE.md §11). That makes USB + Secure Boot the intended, safe path — keep
+# it ENABLED. (Earlier this branch DISABLED Secure Boot because the only USB path
+# used to be sbctl, which enrolls keys into firmware; modules/06 now refuses USB and
+# modules/10 handles it instead, so the old override flag is no longer needed.)
+if [[ "$TARGET_TYPE" == "usb" && "$SECURE_BOOT" == "true" ]]; then
+    log "USB + Secure Boot → shim + MOK chain (firmware keys untouched, BitLocker-safe)"
 fi
 
 # ---- Dual-boot safety: detect Windows on the target disk -------------------
@@ -241,6 +242,15 @@ export DISK TARGET_TYPE TARGET_HOSTNAME TARGET_USERNAME TIMEZONE LOCALE KEYMAP \
 # ---- summary + confirmation -----------------------------------------------
 disk_size="$(lsblk -dpno SIZE "$DISK" 2>/dev/null || echo '?')"
 disk_model="$(lsblk -dpno MODEL "$DISK" 2>/dev/null | xargs || echo '?')"
+if [[ "$SECURE_BOOT" == "true" && "$TARGET_TYPE" == "usb" ]]; then
+    boot_desc="shim + GRUB + MOK (Secure Boot, removable, BitLocker-safe)"
+elif [[ "$SECURE_BOOT" == "true" ]]; then
+    boot_desc="Limine + sbctl (Secure Boot)"
+elif [[ "$TARGET_TYPE" == "usb" ]]; then
+    boot_desc="GRUB (--removable, portable)"
+else
+    boot_desc="GRUB"
+fi
 c_yellow ""
 c_yellow "═══════════════════════════════════════════════════════════"
 c_yellow "  About to DESTROY all data on $DISK and install Arch."
@@ -252,7 +262,7 @@ c_dim    "  User:           $TARGET_USERNAME"
 c_dim    "  Timezone:       $TIMEZONE"
 c_dim    "  Locale:         $LOCALE"
 c_dim    "  Profile:        $PROFILE"
-c_dim    "  Bootloader:     $([[ "$SECURE_BOOT" == "true" ]] && echo 'Limine + sbctl (Secure Boot)' || echo "GRUB$([[ "$TARGET_TYPE" == "usb" ]] && echo ' (--removable, portable)')")"
+c_dim    "  Bootloader:     $boot_desc"
 if [[ -n "$other_disks" ]]; then
 c_green ""
 c_green "  These disks will NOT be touched (data preserved):"
@@ -268,6 +278,39 @@ fi
 bash "$STAGE_DIR/02-disk.sh"
 bash "$STAGE_DIR/03-pacstrap.sh"
 
+# ---- stage host-built artifacts the chroot can't produce itself -----------
+# Two pieces are AUR-only and can't be pacstrapped or built as root inside
+# arch-chroot, so the host provides them and we copy them into the target now:
+#
+#   1. shim-signed → shimx64.efi + mmx64.efi for the USB shim+MOK chain.
+#      modules/10-bootloader-shim-mok.sh reads them from /usr/share/shim-signed
+#      inside the chroot (its default SHIM_SRC), so mirror the host dir there.
+#   2. broadcom-wl-dkms → the 2014 MacBook Air's BCM4360 wifi driver. Optional,
+#      staged as a prebuilt package and pacman -U'd inside the chroot where DKMS
+#      builds it against the target's linux-headers.
+if [[ "$SECURE_BOOT" == "true" && "$TARGET_TYPE" == "usb" ]]; then
+    SHIM_SIGNED_DIR="${SHIM_SIGNED_DIR:-/usr/share/shim-signed}"
+    [[ -f "$SHIM_SIGNED_DIR/shimx64.efi" && -f "$SHIM_SIGNED_DIR/mmx64.efi" ]] \
+        || die "USB Secure Boot needs shim-signed on the host (yay -S shim-signed) or set SHIM_SIGNED_DIR. Looked in: $SHIM_SIGNED_DIR"
+    log "Staging shim binaries from $SHIM_SIGNED_DIR into /mnt/usr/share/shim-signed"
+    install -d -m 0755 /mnt/usr/share/shim-signed
+    cp -a "$SHIM_SIGNED_DIR/." /mnt/usr/share/shim-signed/
+fi
+
+AUR_PKG_CACHE="${AUR_PKG_CACHE:-}"
+if [[ -n "$AUR_PKG_CACHE" && -d "$AUR_PKG_CACHE" ]]; then
+    shopt -s nullglob
+    staged_pkgs=( "$AUR_PKG_CACHE"/*.pkg.tar.zst )
+    shopt -u nullglob
+    if (( ${#staged_pkgs[@]} )); then
+        log "Staging ${#staged_pkgs[@]} prebuilt AUR package(s) and installing in chroot"
+        install -d -m 0755 /mnt/var/cache/staged-aur
+        cp -a "${staged_pkgs[@]}" /mnt/var/cache/staged-aur/
+        arch-chroot /mnt bash -c 'pacman -U --noconfirm /var/cache/staged-aur/*.pkg.tar.zst' \
+            || warn "staged AUR install reported errors (e.g. MacBook wifi driver) — continuing"
+    fi
+fi
+
 # Copy this entire repo into the new system under the user's homedir, so the
 # rice install.sh is available immediately after first boot.
 log "Copying arch-setup tree into /mnt/home/$TARGET_USERNAME/arch-setup"
@@ -279,8 +322,9 @@ cp -a "$ROOT_DIR/." "/mnt/home/$TARGET_USERNAME/arch-setup/"
 log "Entering arch-chroot for system configuration"
 install -Dm755 "$STAGE_DIR/04-chroot-config.sh"     "/mnt/root/04-chroot-config.sh"
 install -Dm755 "$STAGE_DIR/05-bootloader-chroot.sh" "/mnt/root/05-bootloader-chroot.sh"
-install -Dm755 "$MODULES_DIR/05-bootloader-grub.sh"   "/mnt/root/modules/05-bootloader-grub.sh"
-install -Dm755 "$MODULES_DIR/06-bootloader-limine.sh" "/mnt/root/modules/06-bootloader-limine.sh"
+install -Dm755 "$MODULES_DIR/05-bootloader-grub.sh"      "/mnt/root/modules/05-bootloader-grub.sh"
+install -Dm755 "$MODULES_DIR/06-bootloader-limine.sh"   "/mnt/root/modules/06-bootloader-limine.sh"
+install -Dm755 "$MODULES_DIR/10-bootloader-shim-mok.sh" "/mnt/root/modules/10-bootloader-shim-mok.sh"
 
 arch-chroot /mnt /bin/bash -lc "
     set -Eeuo pipefail
@@ -308,7 +352,13 @@ c_green "═══════════════════════�
 c_dim    "  Next steps:"
 c_dim    "    1. reboot   (then remove the install media)"
 c_dim    "    2. log in as $TARGET_USERNAME on tty"
-if [[ "$SECURE_BOOT" == "true" ]]; then
+if [[ "$SECURE_BOOT" == "true" && "$TARGET_TYPE" == "usb" ]]; then
+c_yellow "    3. (Secure Boot, FIRST boot on each new machine) at the boot menu"
+c_yellow "       pick the USB (laptop: F12/F9; Mac: hold Option). shim shows a blue"
+c_yellow "       'MOK management' screen → Enroll key from disk → EFI/BOOT/MOK.der"
+c_yellow "       → Continue → reboot. Do this ONCE per host. No firmware keys are"
+c_yellow "       changed and BitLocker is never disturbed (CLAUDE.md §11)."
+elif [[ "$SECURE_BOOT" == "true" ]]; then
 c_yellow "    3. (Secure Boot) enter UEFI firmware setup. If sbctl reported"
 c_yellow "       that keys could not be enrolled (firmware not in Setup Mode),"
 c_yellow "       clear/remove the platform key in firmware first, reboot, then"

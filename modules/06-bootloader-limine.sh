@@ -34,6 +34,16 @@ if [[ ! -d /sys/firmware/efi ]]; then
     exit 1
 fi
 
+# Guard: this sbctl path enrolls our keys into the firmware's db, which requires
+# Setup Mode and rewrites PCR 7 — fine for a machine we own, catastrophic for a
+# portable stick (triggers BitLocker on every Windows host). USB targets MUST use
+# the shim+MOK module instead. See CLAUDE.md §11.
+if [[ "${TARGET_TYPE:-ssd}" == "usb" ]]; then
+    warn "Refusing sbctl/enroll-keys on a USB target — use modules/10-bootloader-shim-mok.sh"
+    warn "(shim+MOK). That avoids touching firmware keys and BitLocker (CLAUDE.md §11)."
+    exit 1
+fi
+
 log "Installing Limine + sbctl + helpers"
 # limine + efibootmgr + sbctl are in extra. BLAKE2B hashing uses b2sum from
 # coreutils (always present) — Limine wants BLAKE2B, not BLAKE3.

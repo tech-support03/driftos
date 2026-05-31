@@ -1,0 +1,78 @@
+// =============================================================================
+//  config.full.kdl — FULL visual profile (desktop / Ryzen laptop).
+//  Concatenated AFTER config.base.kdl by `rice-profile full`. Holds the three
+//  blocks niri only allows once each (layout, animations) plus the per-app
+//  translucency window-rules, so the light fragment can replace them wholesale.
+//  The shared layout fields (gaps/widths/struts/border) are duplicated in both
+//  fragments by necessity — niri has no way to merge a partial layout block.
+// =============================================================================
+layout {
+    gaps 10
+    center-focused-column "never"
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        proportion 1.0
+    }
+    default-column-width { proportion 0.5; }
+
+    focus-ring {
+        // Borderless = off; use shadows instead.
+        off
+    }
+    border {
+        off
+    }
+    // Soft drop shadows under every window.
+    shadow {
+        on
+        softness 30
+        spread 8
+        offset x=0 y=4
+        color "#00000088"
+    }
+
+    struts {
+        left   0
+        right  0
+        top    0
+        bottom 0
+    }
+}
+
+// Fluid, hardware-accelerated animations (springs settle organically).
+animations {
+    slowdown 1.0
+    workspace-switch {
+        spring damping-ratio=1.0 stiffness=1000 epsilon=0.0001
+    }
+    horizontal-view-movement {
+        spring damping-ratio=1.0 stiffness=800 epsilon=0.0001
+    }
+    window-open {
+        duration-ms 200
+        curve "ease-out-expo"
+    }
+    window-close {
+        duration-ms 150
+        curve "ease-out-quad"
+    }
+    config-notification-open-close { off; }
+}
+
+// Translucent terminals & dialogs (compositor blends them over the wallpaper).
+window-rule {
+    match app-id="Alacritty"
+    opacity 0.92
+}
+window-rule {
+    match app-id="fastfetch-popup"
+    open-floating true
+    opacity 0.92
+    geometry-corner-radius 18
+}
+window-rule {
+    match app-id="org.gnome.Calculator"
+    opacity 0.95
+}

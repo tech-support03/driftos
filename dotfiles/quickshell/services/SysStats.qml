@@ -10,6 +10,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "."          // sibling singletons (Profile) in the Services module
 
 QtObject {
     id: stats
@@ -53,8 +54,12 @@ QtObject {
         }
     }
 
+    // Poll cadence backs off in the light profile (5s vs 1.5s) — the sysmon
+    // detail popover is KEPT, it just refreshes less aggressively so a 4GB
+    // MacBook isn't running a stats script three times a second. Reads Profile
+    // directly (same Services module) so it re-paces live on `rice-profile`.
     readonly property Timer _tick: Timer {
-        interval: 1500
+        interval: Profile.light ? 5000 : 1500
         repeat: true
         running: true
         triggeredOnStart: true
