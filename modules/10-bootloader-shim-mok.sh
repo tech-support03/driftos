@@ -80,18 +80,29 @@ sudo install -Dm644 "$SHIM_SRC/mmx64.efi"   "$BOOTDIR/mmx64.efi"
 sudo install -Dm644 "$MOKDIR/MOK.der"       "$BOOTDIR/MOK.der"
 
 # ---- GRUB image ------------------------------------------------------------
-# shim_lock is the key module: when GRUB is launched BY shim, the shim_lock
-# verifier refuses to boot a kernel that isn't signed by db or an enrolled MOK.
-# Baking it (and its deps) into the image means the protection is active from the
-# first instruction — it can't be skipped by editing grub.cfg.
-log "Building grubx64.efi with shim_lock baked in"
+# We want the shim verifier baked in so a GRUB launched BY shim refuses to boot
+# a kernel that isn't signed by db or an enrolled MOK. Up to grub 2.12 that was a
+# separate loadable module, shim_lock.mod; grub 2.14 folds the verifier into the
+# core EFI image, so shim_lock.mod no longer exists and naming it in --modules
+# makes grub-install abort ("cannot open .../shim_lock.mod"). To work on both, we
+# filter the desired list down to modules this grub actually ships — shim_lock is
+# added when present, and silently dropped (already built in) when it isn't.
+GRUB_MODDIR="/usr/lib/grub/x86_64-efi"
+GRUB_MODULES=""
+for _m in normal test efi_gop efi_uga part_gpt fat ext2 search search_fs_uuid \
+          linux echo all_video gfxterm loadenv configfile tpm shim_lock; do
+    [[ -f "$GRUB_MODDIR/$_m.mod" ]] && GRUB_MODULES="$GRUB_MODULES $_m"
+done
+GRUB_MODULES="${GRUB_MODULES# }"
+SBAT_ARGS=(); [[ -f /usr/share/grub/sbat.csv ]] && SBAT_ARGS=(--sbat /usr/share/grub/sbat.csv)
+log "Building grubx64.efi (modules: $GRUB_MODULES)"
 sudo grub-install \
     --target=x86_64-efi \
     --efi-directory="$ESP" \
     --boot-directory="$ESP" \
     --bootloader-id=BOOT \
-    --modules="normal test efi_gop efi_uga part_gpt fat ext2 search search_fs_uuid linux echo all_video gfxterm loadenv configfile tpm shim_lock" \
-    --sbat /usr/share/grub/sbat.csv \
+    --modules="$GRUB_MODULES" \
+    "${SBAT_ARGS[@]}" \
     --no-nvram --removable --recheck
 # grub-install --removable --bootloader-id=BOOT writes EFI/BOOT/BOOTX64.EFI; we
 # do NOT want GRUB there (shim must own that name). Move GRUB to grubx64.efi and
@@ -103,6 +114,10 @@ sudo install -Dm644 "$SHIM_SRC/shimx64.efi" "$BOOTDIR/BOOTX64.EFI"
 # The profile is passed on the kernel cmdline (rice.profile=); the session
 # reads /proc/cmdline at niri start to pick the full vs light config set.
 ROOT_UUID="$(findmnt -no UUID /)"
+# The kernel + initramfs + ucode live on the ESP (this layout has /boot == the FAT
+# ESP), so GRUB must set its $root to the ESP to FIND them — not to the ext4 root.
+# The ext4 root UUID is only used for the kernel's own root= param (mounting /).
+ESP_UUID="$(findmnt -no UUID "$ESP")"
 UCODE=""
 [[ -f "$ESP/amd-ucode.img"   ]] && UCODE="$UCODE /amd-ucode.img"
 [[ -f "$ESP/intel-ucode.img" ]] && UCODE="$UCODE /intel-ucode.img"
@@ -114,7 +129,7 @@ set default=0
 insmod all_video
 insmod gfxterm
 terminal_output gfxterm
-search --no-floppy --fs-uuid --set=root $ROOT_UUID
+search --no-floppy --fs-uuid --set=root $ESP_UUID
 
 menuentry "driftOS — full rice (laptop / desktop)" {
     linux  /vmlinuz-linux root=UUID=$ROOT_UUID rw quiet loglevel=3 rice.profile=full
