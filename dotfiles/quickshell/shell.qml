@@ -34,4 +34,8 @@ ShellRoot {
     // Network manager (status / wifi toggle / scan / connect). Triggered via
     // `qs ipc call network toggle` (wired to the SideBar network button).
     Overlays.NetworkFlyout { }
+
+    // Volume OSD. Pops up on any volume change; the niri XF86Audio* binds
+    // fire `qs ipc call audio show` right after nudging wpctl.
+    Overlays.VolumeOSD { }
 }

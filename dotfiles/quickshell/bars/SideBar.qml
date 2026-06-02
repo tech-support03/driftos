@@ -45,48 +45,10 @@ Scope {
         return day + " " + dd
     }
 
-    // ---- volume (wpctl-driven; ~4 polls/s + immediate nudge on scroll) ------
-    property int volPct: 0
-    property bool volMuted: false
-    Process {
-        id: volProbe
-        command: ["sh", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || echo 'Volume: 0.0'"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                const t = (this.text || "").trim()
-                root.volMuted = t.indexOf("[MUTED]") !== -1
-                const m = t.match(/Volume: ([0-9.]+)/)
-                root.volPct = m ? Math.round(parseFloat(m[1]) * 100) : 0
-            }
-        }
-    }
-    Timer {
-        interval: 250
-        repeat: true
-        running: true
-        triggeredOnStart: true
-        onTriggered: volProbe.running = true
-    }
-    // Re-fires the probe ~40ms after a wpctl change so the popover snaps to
-    // the new value instead of waiting up to a full poll interval.
-    Timer {
-        id: volRefetch
-        interval: 40
-        repeat: false
-        onTriggered: volProbe.running = true
-    }
-    // Apply a volume delta and immediately re-probe.
-    function bumpVolume(arg) {
-        Quickshell.execDetached(["sh", "-c",
-            "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ " + arg])
-        volRefetch.restart()
-    }
-    readonly property string volGlyph: {
-        if (volMuted) return "󰸈"
-        if (volPct < 34) return "󰕿"
-        if (volPct < 67) return "󰖀"
-        return "󰕾"
-    }
+    // ---- volume -------------------------------------------------------------
+    // Owned by the Services.Audio singleton (single wpctl poller, shared with
+    // the VolumeOSD overlay). The button below binds to it and scroll-nudges
+    // via Audio.setVolume; the OSD pops itself off Audio's bumped() signal.
 
     // ---- niri workspaces (poll every 500ms) ---------------------------------
     property var workspaces: []
@@ -335,12 +297,11 @@ Scope {
                 }
 
                 IconButton {
-                    id: volBtn
-                    glyph: root.volGlyph
-                    tint: root.volMuted ? "#6b7280" : "#60a5fa"
+                    glyph: Services.Audio.glyph
+                    tint: Services.Audio.muted ? "#6b7280" : "#60a5fa"
                     onActivated: root.launchShell("pavucontrol")
-                    onScrolledUp:   root.bumpVolume("2%+")
-                    onScrolledDown: root.bumpVolume("2%-")
+                    onScrolledUp:   Services.Audio.setVolume("2%+")
+                    onScrolledDown: Services.Audio.setVolume("2%-")
                 }
 
                 // Battery \u2014 laptop only. Self-gates on a real BAT* node so the
@@ -393,74 +354,6 @@ Scope {
                     tint: "#f43f5e"
                     // Same flyout as Mod+Escape (PowerFlyout's "power" IPC).
                     onActivated: root.launchShell("qs ipc call power toggle")
-                }
-            }
-
-            // ---- volume hover popover ------------------------------------
-            // Floating tooltip-style readout. Rendered outside the mask
-            // (so the cursor leaving the button \u2192 popover gap dismisses it
-            // naturally \u2014 pure info surface, not interactive).
-            Rectangle {
-                id: volPop
-                width: 168
-                height: volPopCol.implicitHeight + 20
-                x: root.edgeGap + root.sidebarW + 10
-                y: sysmonStack.y + volBtn.y + (volBtn.height - height) / 2
-                radius: 14
-                color: Qt.rgba(0.06, 0.07, 0.10, 0.96)
-                border.color: Qt.rgba(1, 1, 1, 0.07)
-                border.width: 1
-                opacity: volBtn.hovered ? 1 : 0
-                visible: opacity > 0.01
-                scale: volBtn.hovered ? 1.0 : 0.96
-                transformOrigin: Item.Left
-                Behavior on opacity { NumberAnimation { duration: 160 } }
-                Behavior on scale   { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-
-                Column {
-                    id: volPopCol
-                    anchors.centerIn: parent
-                    spacing: 8
-                    width: parent.width - 20
-
-                    Item {
-                        width: volPopCol.width
-                        height: 16
-                        Text {
-                            anchors.left: parent.left
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: root.volMuted ? "Muted" : "Volume"
-                            color: "#f4f4f6"
-                            font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 12
-                            font.weight: Font.DemiBold
-                        }
-                        Text {
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: root.volPct + "%"
-                            color: root.volMuted ? "#6b7280" : "#60a5fa"
-                            font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 12
-                            font.weight: Font.DemiBold
-                        }
-                    }
-
-                    Rectangle {
-                        width: volPopCol.width
-                        height: 4
-                        radius: 2
-                        color: Qt.rgba(1, 1, 1, 0.10)
-                        Rectangle {
-                            anchors.left: parent.left
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            width: parent.width * Math.max(0, Math.min(100, root.volPct)) / 100
-                            radius: parent.radius
-                            color: root.volMuted ? "#6b7280" : "#60a5fa"
-                            Behavior on width { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        }
-                    }
                 }
             }
         }

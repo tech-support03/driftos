@@ -4,3 +4,4 @@ singleton SysStats 1.0 SysStats.qml
 singleton Network 1.0 Network.qml
 singleton Profile 1.0 Profile.qml
 singleton Battery 1.0 Battery.qml
+singleton Audio 1.0 Audio.qml

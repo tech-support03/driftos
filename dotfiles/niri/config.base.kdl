@@ -138,7 +138,7 @@ layer-rule {
 // Seed the visual profile from the kernel cmdline (rice.profile=) BEFORE
 // quickshell starts, so the MacBook's GRUB entry comes up light automatically.
 spawn-at-startup "rice-profile-seed"
-spawn-at-startup "/home/arjun/.local/bin/wallpaper-init"
+spawn-at-startup "wallpaper-init"
 // Both bars are Quickshell (top-bar dashboard + left side-bar with system monitor).
 spawn-at-startup "quickshell"
 spawn-at-startup "mako"
@@ -192,9 +192,12 @@ binds {
     Mod+Shift+F        { fullscreen-window; }
     Mod+R              { reset-window-height; }
 
-    XF86AudioRaiseVolume  allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%+"; }
-    XF86AudioLowerVolume  allow-when-locked=true { spawn "wpctl" "set-volume" "@DEFAULT_AUDIO_SINK@" "5%-"; }
-    XF86AudioMute         allow-when-locked=true { spawn "wpctl" "set-mute"   "@DEFAULT_AUDIO_SINK@" "toggle"; }
+    // wpctl runs first (so volume works even if Quickshell is down), then we
+    // poke the VolumeOSD overlay to pop the on-screen readout. Capped at 100%
+    // to match the sidebar scroll behavior.
+    XF86AudioRaiseVolume  allow-when-locked=true { spawn "sh" "-c" "wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 2%+ && qs ipc call audio show"; }
+    XF86AudioLowerVolume  allow-when-locked=true { spawn "sh" "-c" "wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%- && qs ipc call audio show"; }
+    XF86AudioMute         allow-when-locked=true { spawn "sh" "-c" "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && qs ipc call audio show"; }
     XF86AudioPlay         allow-when-locked=true { spawn "playerctl" "play-pause"; }
     XF86AudioNext         allow-when-locked=true { spawn "playerctl" "next"; }
     XF86AudioPrev         allow-when-locked=true { spawn "playerctl" "previous"; }
