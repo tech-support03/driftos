@@ -35,6 +35,10 @@ ShellRoot {
     // `qs ipc call network toggle` (wired to the SideBar network button).
     Overlays.NetworkFlyout { }
 
+    // Bluetooth manager (status / power toggle / scan / connect). Triggered via
+    // `qs ipc call bluetooth toggle` (wired to the SideBar bluetooth button).
+    Overlays.BluetoothFlyout { }
+
     // Volume OSD. Pops up on any volume change; the niri XF86Audio* binds
     // fire `qs ipc call audio show` right after nudging wpctl.
     Overlays.VolumeOSD { }

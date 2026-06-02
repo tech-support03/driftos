@@ -296,6 +296,63 @@ Scope {
                     onActivated: root.launchShell("qs ipc call network toggle")
                 }
 
+                // Bluetooth — its own pill widget under the network button (like
+                // the clock / battery pills): glyph tier + a short status line
+                // (connected device name · "On" · "Off"). Click opens the manager
+                // flyout (qs ipc → bluetooth). Self-gates on a real controller, so
+                // a desktop with no BT adapter hides it (same idiom as battPill).
+                Rectangle {
+                    id: btPill
+                    visible: Services.Bluetooth.available
+                    width: parent.width
+                    height: 50 * win.ui
+                    radius: 14
+                    color: Qt.rgba(1, 1, 1, btHover.hovered ? 0.07 : 0.04)
+                    border.color: Qt.rgba(1, 1, 1, 0.06)
+                    border.width: 1
+                    Behavior on color { ColorAnimation { duration: 160 } }
+                    HoverHandler { id: btHover; cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: root.launchShell("qs ipc call bluetooth toggle") }
+
+                    readonly property color accentTint: Services.Bluetooth.connectedCount > 0 ? "#a5d8ff"
+                                                       : Services.Bluetooth.powered ? "#e5e7eb"
+                                                       : "#6b7280"
+                    // One-word/short status under the glyph. A single connected
+                    // device shows its (ellipsized) name; otherwise on/off state.
+                    readonly property string label: {
+                        const c = Services.Bluetooth.connectedCount
+                        if (c === 1) return Services.Bluetooth.connectedName
+                        if (c > 1)   return c + " dev"
+                        return Services.Bluetooth.powered ? "On" : "Off"
+                    }
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 1
+                        width: parent.width - 8
+
+                        Text {
+                            text: Services.Bluetooth.glyph
+                            color: btPill.accentTint
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 19 * win.ui
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            Behavior on color { ColorAnimation { duration: 160 } }
+                        }
+                        Text {
+                            text: btPill.label
+                            color: btPill.accentTint
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 9 * win.ui
+                            font.weight: Font.DemiBold
+                            width: parent.width
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            Behavior on color { ColorAnimation { duration: 160 } }
+                        }
+                    }
+                }
+
                 IconButton {
                     glyph: Services.Audio.glyph
                     tint: Services.Audio.muted ? "#6b7280" : "#60a5fa"
