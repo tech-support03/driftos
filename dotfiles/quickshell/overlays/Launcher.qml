@@ -23,6 +23,32 @@ Scope {
     property var allApps: []
     property var results: []
     property bool active: false        // drives open/close animation
+    property int  selectedIndex: 0     // keyboard-highlighted tile
+
+    function launchSelected() {
+        const i = scope.selectedIndex
+        if (i >= 0 && i < scope.results.length) {
+            scope.results[i].execute()
+            scope.close()
+        }
+    }
+
+    // Move the keyboard selection by (dx, dy) cells, clamped to the result set.
+    function moveSelection(dx, dy) {
+        const n = scope.results.length
+        if (n === 0) return
+        const cols = grid.cols
+        let i = scope.selectedIndex
+        if (dx !== 0) {
+            i = Math.max(0, Math.min(n - 1, i + dx))
+        }
+        if (dy !== 0) {
+            const target = i + dy * cols
+            // Don't wrap off the ends — clamp, but only jump rows if a row exists.
+            if (target >= 0 && target < n) i = target
+        }
+        scope.selectedIndex = i
+    }
 
     function buildAllApps() {
         const src = DesktopEntries.applications.values
@@ -58,6 +84,11 @@ Scope {
         results = out
     }
 
+    onResultsChanged: {
+        selectedIndex = 0
+        grid.positionViewAtBeginning()
+    }
+
     onQueryChanged: recompute()
     Component.onCompleted: { buildAllApps(); recompute() }
 
@@ -70,6 +101,7 @@ Scope {
     function open() {
         panel.visible = true
         scope.query = ""
+        scope.selectedIndex = 0
         active = true
         // Forcing focus immediately races with the layer-shell handshake;
         // a single frame delay is enough for the surface to be ready.
@@ -174,13 +206,22 @@ Scope {
                     verticalAlignment: TextInput.AlignVCenter
                     selectByMouse: true
                     onTextChanged: scope.query = text
-                    onAccepted: {
-                        if (scope.results.length > 0) {
-                            scope.results[0].execute()
-                            scope.close()
+                    onAccepted: scope.launchSelected()
+                    Keys.onEscapePressed: scope.close()
+
+                    // Arrow keys drive the grid selection instead of the text
+                    // cursor — this is a launcher, the query is short and the
+                    // grid is what you actually want to move through.
+                    Keys.onPressed: (event) => {
+                        switch (event.key) {
+                        case Qt.Key_Right: scope.moveSelection(1, 0);  event.accepted = true; break
+                        case Qt.Key_Left:  scope.moveSelection(-1, 0); event.accepted = true; break
+                        case Qt.Key_Down:  scope.moveSelection(0, 1);  event.accepted = true; break
+                        case Qt.Key_Up:    scope.moveSelection(0, -1); event.accepted = true; break
+                        case Qt.Key_Tab:   scope.moveSelection(1, 0);  event.accepted = true; break
+                        case Qt.Key_Backtab: scope.moveSelection(-1, 0); event.accepted = true; break
                         }
                     }
-                    Keys.onEscapePressed: scope.close()
                 }
             }
 
@@ -197,6 +238,8 @@ Scope {
                 width: cols * cellWidth
                 height: rows * cellHeight
                 model: scope.results
+                currentIndex: scope.selectedIndex
+                onCurrentIndexChanged: positionViewAtIndex(currentIndex, GridView.Contain)
                 clip: true
                 interactive: true
                 cacheBuffer: cellHeight * 4
@@ -215,6 +258,18 @@ Scope {
                     width: grid.cellWidth
                     height: grid.cellHeight
                     required property var modelData
+                    required property int index
+
+                    readonly property bool selected: tile.index === grid.currentIndex
+
+                    // Resolve the icon up front; iconPath(name, true) returns ""
+                    // when the theme has no match, which lets us fall back to a
+                    // nicer lettered tile instead of the generic puzzle glyph.
+                    readonly property string iconName:
+                        (modelData && modelData.icon) ? modelData.icon : ""
+                    readonly property string resolved:
+                        iconName ? Quickshell.iconPath(iconName, true) : ""
+                    readonly property bool hasIcon: resolved.length > 0
 
                     Rectangle {
                         id: iconBg
@@ -222,18 +277,45 @@ Scope {
                         y: 8
                         width: 108; height: 108
                         radius: 26
-                        color: hh.hovered ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
-                        scale: ma.pressed ? 0.92 : (hh.hovered ? 1.06 : 1.0)
+                        color: (tile.selected || hh.hovered) ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
+                        border.width: tile.selected ? 2 : 0
+                        border.color: "#c5b3ff"
+                        scale: ma.pressed ? 0.92 : ((tile.selected || hh.hovered) ? 1.06 : 1.0)
                         Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
                         Behavior on color { ColorAnimation { duration: 140 } }
 
                         IconImage {
                             anchors.centerIn: parent
                             implicitSize: 78
-                            source: tile.modelData
-                                ? Quickshell.iconPath(tile.modelData.icon, "application-x-executable")
-                                : ""
+                            visible: tile.hasIcon
+                            source: tile.resolved
                             asynchronous: true
+                        }
+
+                        // Fallback: a tinted rounded square with the app's
+                        // initial, used when no themed icon is found.
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 78; height: 78
+                            radius: 20
+                            visible: !tile.hasIcon
+                            gradient: Gradient {
+                                GradientStop { position: 0.0; color: Qt.rgba(0.77, 0.70, 1.0, 0.22) }
+                                GradientStop { position: 1.0; color: Qt.rgba(0.77, 0.70, 1.0, 0.10) }
+                            }
+                            border.width: 1
+                            border.color: Qt.rgba(1, 1, 1, 0.10)
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: (tile.modelData && tile.modelData.name)
+                                    ? tile.modelData.name.charAt(0).toUpperCase()
+                                    : "?"
+                                color: "#e7e1ff"
+                                font.family: "Inter"
+                                font.pixelSize: 36
+                                font.weight: Font.DemiBold
+                            }
                         }
 
                         HoverHandler { id: hh }
@@ -241,6 +323,8 @@ Scope {
                             id: ma
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            onEntered: scope.selectedIndex = tile.index
                             onClicked: {
                                 if (tile.modelData) tile.modelData.execute()
                                 scope.close()
@@ -255,7 +339,7 @@ Scope {
                         width: 150
                         horizontalAlignment: Text.AlignHCenter
                         text: tile.modelData ? tile.modelData.name : ""
-                        color: "#f4f4f6"
+                        color: tile.selected ? "#ffffff" : "#f4f4f6"
                         font.family: "Inter"
                         font.pixelSize: 12
                         elide: Text.ElideRight
