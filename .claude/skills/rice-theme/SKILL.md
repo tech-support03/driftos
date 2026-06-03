@@ -74,7 +74,10 @@ the user explicitly asks.
 ## Adding a NEW themed surface later
 
 1. If it's QML: reference a `Theme.<token>`; if no token fits, add one to
-   `Theme.qml` (derive it from c1..c4 with `Qt.lighter/darker`).
+   `theme/Theme.qml` (derive it from c1..c4 with `Qt.lighter/darker`). **Any
+   file in `bars/` or `overlays/` must `import "../theme"`** — the `Theme`
+   singleton lives in the `theme/` module and is NOT visible to submodule QML
+   without that import (root-level singletons only reach root files).
 2. If it's a generated config: add an `@TOKEN@` to its template in
    `dotfiles/rice/templates/` and emit the value in `scripts/rice-theme.sh`'s
    Python block.
