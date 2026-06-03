@@ -4,6 +4,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Services.Mpris
 import "../services" as Services
+import "../theme"
 
 // Caelestia-style top bar: invisible at rest, a wide top-center hover target
 // expands into a dashboard card. While media plays it shows a waveform that

@@ -20,6 +20,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import "../services" as Services
+import "../theme"
 
 Scope {
     id: scope

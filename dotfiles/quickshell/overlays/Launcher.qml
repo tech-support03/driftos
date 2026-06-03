@@ -14,6 +14,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
 import Quickshell.Widgets
+import "../theme"
 
 Scope {
     id: scope

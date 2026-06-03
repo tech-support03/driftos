@@ -1,4 +1,5 @@
 import QtQuick
+import "../theme"
 
 // Compact navigable monthly calendar grid with today highlighted and hover effects.
 Item {

@@ -12,6 +12,7 @@
 import QtQuick
 import Quickshell
 import "../services" as Services
+import "../theme"
 
 Item {
     id: root

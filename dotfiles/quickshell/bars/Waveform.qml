@@ -1,4 +1,5 @@
 import QtQuick
+import "../theme"
 
 // Animated cava-driven waveform. `bars` is an array of ints in [0, maxValue].
 Item {
