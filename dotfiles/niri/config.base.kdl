@@ -163,6 +163,11 @@ binds {
     Mod+Shift+B        { spawn "/home/arjun/.local/bin/wallpaper-next"; }
     // Toggle the light/full visual profile (cava, shadows, translucency, anims).
     Mod+Shift+P        { spawn "rice-profile" "toggle"; }
+    // Theme switcher: Mod+T opens the Quickshell picker "menu"; Mod+Shift+T
+    // cycles to the next saved theme directly (rice-theme derives the whole
+    // palette from 4 colours and re-themes live).
+    Mod+T              { spawn "qs" "ipc" "call" "theme" "toggle"; }
+    Mod+Shift+T        { spawn "rice-theme" "next"; }
 
     Mod+Left           { focus-column-left; }
     Mod+Right          { focus-column-right; }

@@ -255,7 +255,7 @@ Scope {
                         Text {
                             width: parent.width
                             text: root.timeStr
-                            color: "#8a9bf5"
+                            color: Theme.accentBright
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 54
                             font.weight: Font.DemiBold
@@ -312,7 +312,7 @@ Scope {
                                 width: 58; height: 58
                                 radius: 8
                                 clip: true
-                                color: "#171a2e"
+                                color: Theme.surfaceTint
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: root.player !== null
 
@@ -326,7 +326,7 @@ Scope {
                                 Text {
                                     anchors.centerIn: parent
                                     text: "♪"
-                                    color: "#474f85"
+                                    color: Theme.accentMuted
                                     font.pixelSize: 24
                                     visible: artImg.status !== Image.Ready
                                 }
@@ -342,7 +342,7 @@ Scope {
                                     text: root.player
                                           ? (root.player.trackTitle || "Unknown track")
                                           : "Nothing playing"
-                                    color: "#93c5fd"
+                                    color: Theme.blueBright
                                     font.family: "JetBrainsMono Nerd Font"
                                     font.pixelSize: 13
                                     font.weight: Font.DemiBold
@@ -432,7 +432,7 @@ Scope {
                             text: root.weatherParts.length > 0
                                   ? root.weatherParts[0]
                                   : "Loading…"
-                            color: "#67e8f9"
+                            color: Theme.cyan
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 20
                             font.weight: Font.DemiBold

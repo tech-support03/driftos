@@ -74,7 +74,7 @@ Scope {
             Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
             Behavior on scale   { NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
 
-            readonly property color accent: Services.Audio.muted ? "#6b7280" : "#60a5fa"
+            readonly property color accent: Services.Audio.muted ? "#6b7280" : Theme.blue
 
             Row {
                 anchors.fill: parent

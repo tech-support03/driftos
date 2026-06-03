@@ -153,7 +153,7 @@ Scope {
                             Text {
                                 anchors.centerIn: parent
                                 text: scope.net.glyph || "󰤯"
-                                color: scope.net.connected ? "#60a5fa" : "#8e8e96"
+                                color: scope.net.connected ? Theme.blue : "#8e8e96"
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: 22
                             }
@@ -238,7 +238,7 @@ Scope {
                                 id: rescanIcon
                                 anchors.centerIn: parent
                                 text: "󰑐"
-                                color: scope.net.scanning ? "#60a5fa" : "#c9c9d0"
+                                color: scope.net.scanning ? Theme.blue : "#c9c9d0"
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: 16
                                 RotationAnimation on rotation {
@@ -308,7 +308,7 @@ Scope {
                                             anchors.leftMargin: 12
                                             anchors.verticalCenter: parent.verticalCenter
                                             text: scope.net.signalGlyph(row.modelData.signal)
-                                            color: row.modelData.active ? "#60a5fa" : "#c9c9d0"
+                                            color: row.modelData.active ? Theme.blue : "#c9c9d0"
                                             font.family: "JetBrainsMono Nerd Font"
                                             font.pixelSize: 18
                                         }
@@ -404,7 +404,7 @@ Scope {
                                                 Text {
                                                     anchors.centerIn: parent
                                                     text: "󰜷"
-                                                    color: "#60a5fa"
+                                                    color: Theme.blue
                                                     font.family: "JetBrainsMono Nerd Font"
                                                     font.pixelSize: 14
                                                 }

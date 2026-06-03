@@ -472,3 +472,27 @@ in** (a broken fragment can never strand the session), then pokes
 The visual is in `arch rice v5 daily-driver.html`. The user has tuned
 it. Match its hover/animation/translucency behavior beat-for-beat in
 QML. Every transition, every hover state, every flyout — animated.
+
+---
+
+## 13. Theming — `rice-theme` (4-colour palettes)
+
+Colour is driven by **four colours** (`c1` accent/hero, `c2` blue, `c3` cyan,
+`c4` teal); all other shades are derived. Same generate-and-reload spirit as
+`rice-profile`:
+
+- **Quickshell** binds to `Theme.<token>` in `dotfiles/quickshell/Theme.qml`,
+  which reads `~/.config/rice/colors` **live** (FileView) → re-themes with no
+  restart. **Never hardcode a themed hex in QML** — add/use a `Theme` token.
+- **btop / gtklock / fastfetch / zsh** can't watch a file, so `rice-theme`
+  **generates** them from `dotfiles/rice/templates/*` (btop emitted inline)
+  into `~/.config` on each switch.
+- `rice-theme list|status|set <name>|next|apply-colors c1..c4|save <name>|
+  create <name> c1..c4`. **Mod+T** = Quickshell picker overlay; **Mod+Shift+T**
+  = cycle. Theme **#1 is `indigo`** (`#5b6ee0 #60a5fa #22d3ee #2dd4bf`).
+- New palettes are **live-only until `save`d** (explicit). App-brand and
+  semantic (`#f43f5e`) colours and alacritty's ANSI palette are **not** themed.
+
+Full colour map + procedure: **`docs/THEMING.md`** and the
+**`.claude/skills/rice-theme`** skill. Edit rule: themed colour → a `Theme`
+token (QML) or an `@TOKEN@` in a template (generated config), never a literal.

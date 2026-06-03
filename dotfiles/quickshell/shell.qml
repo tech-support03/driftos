@@ -42,4 +42,8 @@ ShellRoot {
     // Volume OSD. Pops up on any volume change; the niri XF86Audio* binds
     // fire `qs ipc call audio show` right after nudging wpctl.
     Overlays.VolumeOSD { }
+
+    // Theme picker "menu". Triggered via `qs ipc call theme toggle` (wired to
+    // Mod+T in niri); Mod+Shift+T cycles directly via `rice-theme next`.
+    Overlays.ThemePicker { }
 }

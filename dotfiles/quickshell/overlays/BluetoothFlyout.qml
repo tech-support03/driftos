@@ -138,7 +138,7 @@ Scope {
                             Text {
                                 anchors.centerIn: parent
                                 text: scope.bt.glyph || "󰂯"
-                                color: scope.bt.connectedCount > 0 ? "#60a5fa" : "#8e8e96"
+                                color: scope.bt.connectedCount > 0 ? Theme.blue : "#8e8e96"
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: 22
                             }
@@ -223,7 +223,7 @@ Scope {
                                 id: rescanIcon
                                 anchors.centerIn: parent
                                 text: "󰑐"
-                                color: scope.bt.scanning ? "#60a5fa" : "#c9c9d0"
+                                color: scope.bt.scanning ? Theme.blue : "#c9c9d0"
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: 16
                                 RotationAnimation on rotation {
@@ -289,7 +289,7 @@ Scope {
                                         anchors.leftMargin: 12
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: row.modelData.glyph
-                                        color: row.modelData.connected ? "#60a5fa" : "#c9c9d0"
+                                        color: row.modelData.connected ? Theme.blue : "#c9c9d0"
                                         font.family: "JetBrainsMono Nerd Font"
                                         font.pixelSize: 18
                                     }

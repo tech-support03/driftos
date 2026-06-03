@@ -55,10 +55,10 @@ Item {
     function launchBtop() { Quickshell.execDetached(["alacritty", "-e", "btop"]) }
 
     // Color tokens, one per category — cool indigo→blue→cyan→teal ramp.
-    readonly property color cpuColor:  "#5b6ee0"   // indigo (hero)
-    readonly property color memColor:  "#60a5fa"   // blue
-    readonly property color gpuColor:  "#22d3ee"   // cyan
-    readonly property color diskColor: "#2dd4bf"   // teal
+    readonly property color cpuColor:  Theme.accent   // indigo (hero)
+    readonly property color memColor:  Theme.blue   // blue
+    readonly property color gpuColor:  Theme.cyan   // cyan
+    readonly property color diskColor: Theme.teal   // teal
 
     readonly property var s: Services.SysStats
 
@@ -192,7 +192,7 @@ Item {
                 property string title: ""
                 property string sub:   ""
                 property int    pct:   0
-                property color  tint:  "#5b6ee0"
+                property color  tint:  Theme.accent
                 property var    facts: []
 
                 Item {

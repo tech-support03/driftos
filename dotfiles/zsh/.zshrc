@@ -15,6 +15,15 @@ esac
 # Skip the rest for non-interactive shells (scp, scripts sourcing this, etc.).
 [[ $- == *i* ]] || return
 
+# ── Theme palette ──────────────────────────────────────────────────────────
+# The Powerline prompt + completion headers follow the active rice theme.
+# `rice-theme` regenerates ~/.config/rice/colors.sh on every switch; we source
+# it here (new terminals pick up the new theme). Indigo defaults first so the
+# prompt is correct before rice-theme has ever run.
+RICE_ACCENT='#5b6ee0'; RICE_ACCENT_DIM='#3d4bb8'
+RICE_BLUE='#60a5fa';   RICE_CYAN='#22d3ee'; RICE_TEAL='#2dd4bf'
+[[ -r "$HOME/.config/rice/colors.sh" ]] && source "$HOME/.config/rice/colors.sh"
+
 # ── History ──────────────────────────────────────────────────────────────
 # Autosuggestions pull from history, so a generous, deduped, shared history
 # makes the grey suggestions far more useful.
@@ -51,7 +60,7 @@ zstyle ':completion:*' menu select                      # arrow-key menu
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'  # case-insensitive
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}   # colourised matches
 zstyle ':completion:*' group-name ''
-zstyle ':completion:*:descriptions' format '%F{#5b6ee0}%d%f'  # accent headers
+zstyle ':completion:*:descriptions' format "%F{$RICE_ACCENT}%d%f"  # accent headers
 setopt COMPLETE_IN_WORD
 setopt ALWAYS_TO_END
 
@@ -106,9 +115,9 @@ setopt PROMPT_SUBST
 () {
     local sep=$'' icon=$''   #
     local fg='#f4f4f6'                   # light text — readable on the dark blocks
-    local seg1='#5b6ee0' seg2='#3d4bb8'  # user|host , directory  (indigo/blue)
-    # short tail, blue → cyan → teal (no pink)
-    local g1='#4f8fe6' g2='#3fc0d6' g3='#37d6b8'
+    local seg1="$RICE_ACCENT" seg2="$RICE_ACCENT_DIM"  # user|host , directory
+    # short tail, blue → cyan → teal — follows the active theme
+    local g1="$RICE_BLUE" g2="$RICE_CYAN" g3="$RICE_TEAL"
 
     PROMPT="%K{$seg1}%F{$fg} $icon %n|%m %f"          # icon + user|host
     PROMPT+="%K{$seg2}%F{$seg1}$sep%f"                  #  seg1 → seg2

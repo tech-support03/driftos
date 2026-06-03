@@ -161,7 +161,7 @@ Scope {
                                 anchors.left: parent.left
                                 anchors.leftMargin: 16
                                 text: row.modelData.glyph
-                                color: row.dangerous ? "#e87575" : "#5b6ee0"
+                                color: row.dangerous ? "#e87575" : Theme.accent
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: 16
                             }

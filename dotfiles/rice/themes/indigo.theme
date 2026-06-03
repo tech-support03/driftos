@@ -1,0 +1,10 @@
+# rice theme — the 4-color palette that drives the whole system.
+# c1 = accent / hero   c2 = blue   c3 = cyan   c4 = teal
+# Shades (bright/dim/muted/tints, btop gradients) are DERIVED from these by
+# `rice-theme`; you only ever pick four. This is theme #1 — the original
+# "indigo" look the rice shipped with.
+name=indigo
+c1=#5b6ee0
+c2=#60a5fa
+c3=#22d3ee
+c4=#2dd4bf
