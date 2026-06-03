@@ -33,7 +33,7 @@ Item {
             Text {
                 anchors { left: parent.left; verticalCenter: parent.verticalCenter }
                 text: "‹"
-                color: prevHover.hovered ? "#a78bfa" : "#6b7280"
+                color: prevHover.hovered ? "#5b6ee0" : "#6b7280"
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 18
                 Behavior on color { ColorAnimation { duration: 100 } }
@@ -60,7 +60,7 @@ Item {
             Text {
                 anchors { right: parent.right; verticalCenter: parent.verticalCenter }
                 text: "›"
-                color: nextHover.hovered ? "#a78bfa" : "#6b7280"
+                color: nextHover.hovered ? "#5b6ee0" : "#6b7280"
                 font.family: "JetBrainsMono Nerd Font"
                 font.pixelSize: 18
                 Behavior on color { ColorAnimation { duration: 100 } }
@@ -117,7 +117,7 @@ Item {
                         anchors.centerIn: parent
                         width: 24; height: 20
                         radius: 6
-                        color: cell.isToday             ? "#7c3aed"
+                        color: cell.isToday             ? "#5b6ee0"
                              : cellHover.hovered        ? Qt.rgba(1, 1, 1, 0.1)
                              : "transparent"
                         Behavior on color { ColorAnimation { duration: 100 } }

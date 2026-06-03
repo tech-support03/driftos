@@ -255,7 +255,7 @@ Scope {
                         Text {
                             width: parent.width
                             text: root.timeStr
-                            color: "#c4b5fd"
+                            color: "#8a9bf5"
                             font.family: "JetBrainsMono Nerd Font"
                             font.pixelSize: 54
                             font.weight: Font.DemiBold
@@ -312,7 +312,7 @@ Scope {
                                 width: 58; height: 58
                                 radius: 8
                                 clip: true
-                                color: "#1a172b"
+                                color: "#171a2e"
                                 anchors.verticalCenter: parent.verticalCenter
                                 visible: root.player !== null
 
@@ -326,7 +326,7 @@ Scope {
                                 Text {
                                     anchors.centerIn: parent
                                     text: "♪"
-                                    color: "#4b4570"
+                                    color: "#474f85"
                                     font.pixelSize: 24
                                     visible: artImg.status !== Image.Ready
                                 }
@@ -342,7 +342,7 @@ Scope {
                                     text: root.player
                                           ? (root.player.trackTitle || "Unknown track")
                                           : "Nothing playing"
-                                    color: "#fcd34d"
+                                    color: "#93c5fd"
                                     font.family: "JetBrainsMono Nerd Font"
                                     font.pixelSize: 13
                                     font.weight: Font.DemiBold

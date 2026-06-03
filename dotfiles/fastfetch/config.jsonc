@@ -2,13 +2,18 @@
 // Minimal translucent system summary for the Arch-logo hover popup.
 {
     "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+    // Colors match the zsh Powerline prompt: indigo #5b6ee0 + cyan #3fc0d6.
+    // Truecolor SGR (38;2;R;G;B) is used so the hex is exact on every
+    // fastfetch version (named colors / #hex support varies by release).
     "logo": {
         "type": "small",
-        "padding": { "top": 1, "right": 2 }
+        "padding": { "top": 1, "right": 2 },
+        // Both slots → indigo so the entire Arch logo is one solid colour.
+        "color": { "1": "38;2;91;110;224", "2": "38;2;91;110;224" }
     },
     "display": {
         "separator": "  ",
-        "color": { "keys": "magenta", "title": "cyan" }
+        "color": { "keys": "38;2;63;192;214", "title": "38;2;91;110;224" }  // cyan keys, indigo title
     },
     "modules": [
         "title",

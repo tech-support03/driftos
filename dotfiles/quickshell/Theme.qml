@@ -4,7 +4,7 @@ import QtQuick
 
 QtObject {
     // Colors
-    readonly property color accent:   "#c5b3ff"
+    readonly property color accent:   "#5b6ee0"
     readonly property color accent2:  "#a5d8ff"
     readonly property color accent3:  "#b5f0d4"
     readonly property color danger:   "#e87575"

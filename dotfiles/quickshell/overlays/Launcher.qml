@@ -279,7 +279,7 @@ Scope {
                         radius: 26
                         color: (tile.selected || hh.hovered) ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
                         border.width: tile.selected ? 2 : 0
-                        border.color: "#c5b3ff"
+                        border.color: "#5b6ee0"
                         scale: ma.pressed ? 0.92 : ((tile.selected || hh.hovered) ? 1.06 : 1.0)
                         Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
                         Behavior on color { ColorAnimation { duration: 140 } }

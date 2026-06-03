@@ -54,11 +54,11 @@ Item {
     // ---- click handler (shared launcher) ------------------------------------
     function launchBtop() { Quickshell.execDetached(["alacritty", "-e", "btop"]) }
 
-    // Color tokens, one per category (matches the mockup palette)
-    readonly property color cpuColor:  "#c4b5fd"
-    readonly property color memColor:  "#7dd3fc"
-    readonly property color gpuColor:  "#86efac"
-    readonly property color diskColor: "#fbbf24"
+    // Color tokens, one per category — cool indigo→blue→cyan→teal ramp.
+    readonly property color cpuColor:  "#5b6ee0"   // indigo (hero)
+    readonly property color memColor:  "#60a5fa"   // blue
+    readonly property color gpuColor:  "#22d3ee"   // cyan
+    readonly property color diskColor: "#2dd4bf"   // teal
 
     readonly property var s: Services.SysStats
 
@@ -192,7 +192,7 @@ Item {
                 property string title: ""
                 property string sub:   ""
                 property int    pct:   0
-                property color  tint:  "#c4b5fd"
+                property color  tint:  "#5b6ee0"
                 property var    facts: []
 
                 Item {

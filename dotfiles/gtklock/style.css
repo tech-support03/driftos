@@ -1,9 +1,9 @@
-/* gtklock theme — aurora/lavender, GTK3.
+/* gtklock theme — aurora/indigo, GTK3.
  * Widget IDs come from gtklock's gtklock.ui:
  *   #window-box #time-box #clock-label #date-label
  *   #body-revealer #body-grid #input-field #input-label
  *   #unlock-button #error-label #warning-label
- * Tokens mirror Quickshell Theme.qml (accent #c5b3ff, fg0 #f4f4f6, …).
+ * Tokens mirror Quickshell Theme.qml (accent #5b6ee0, fg0 #f4f4f6, …).
  */
 
 window {
@@ -40,13 +40,13 @@ window {
     color: #f4f4f6;
     font-family: "Inter", sans-serif;
     font-size: 15px;
-    caret-color: #c5b3ff;
+    caret-color: #5b6ee0;
     transition: border-color 180ms cubic-bezier(0.2, 0.85, 0.25, 1),
                 background-color 180ms cubic-bezier(0.2, 0.85, 0.25, 1);
 }
 
 #input-field:focus {
-    border-color: #c5b3ff;
+    border-color: #5b6ee0;
     background-color: rgba(255, 255, 255, 0.12);
 }
 

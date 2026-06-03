@@ -147,7 +147,7 @@ Scope {
 
                     IconButton {
                         glyph: "\uF303"   // arch logo
-                        tint: "#67e8f9"
+                        tint: "#5b6ee0"
                         onActivated: root.launchShell("fastfetch-popup")
                     }
 
@@ -176,7 +176,7 @@ Scope {
                                     width: modelData.is_focused ? 4 : 6
                                     height: (modelData.is_focused ? 16 : 6) * win.ui
                                     radius: width / 2
-                                    color: modelData.is_focused ? "#c4b5fd"
+                                    color: modelData.is_focused ? "#5b6ee0"
                                           : modelData.is_active ? Qt.rgba(1, 1, 1, 0.55)
                                           : Qt.rgba(1, 1, 1, 0.25)
                                     Behavior on height { NumberAnimation { duration: 160 } }
@@ -208,7 +208,7 @@ Scope {
                         onActivated: root.launch(Services.Profile.light ? "firefox" : "google-chrome-stable")
                     }
                     IconButton { glyph: "\uF1BC";   tint: "#4ade80"; onActivated: root.launch("spotify") }
-                    IconButton { glyph: "\uF120";   tint: "#d8b4fe"; onActivated: root.launch("alacritty") }
+                    IconButton { glyph: "\uF120";   tint: "#5b6ee0"; onActivated: root.launch("alacritty") }
                     IconButton { glyph: "󰙯";  tint: "#a5b4fc"; onActivated: root.launch("discord") }
                     IconButton { glyph: "\uF232";   tint: "#86efac"; onActivated: root.launch("whatsapp-web") }
                     IconButton { glyph: "\uF1B6";   tint: "#93c5fd"; onActivated: root.launch("steam") }
@@ -291,7 +291,7 @@ Scope {
                 // service; click opens the manager flyout (qs ipc → network).
                 IconButton {
                     glyph: Services.Network.glyph || "󰤯"
-                    tint: Services.Network.connected ? "#a5d8ff"
+                    tint: Services.Network.connected ? "#60a5fa"
                          : Services.Network.wifiEnabled ? "#8e8e96" : "#6b7280"
                     onActivated: root.launchShell("qs ipc call network toggle")
                 }
@@ -314,7 +314,7 @@ Scope {
                     HoverHandler { id: btHover; cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: root.launchShell("qs ipc call bluetooth toggle") }
 
-                    readonly property color accentTint: Services.Bluetooth.connectedCount > 0 ? "#a5d8ff"
+                    readonly property color accentTint: Services.Bluetooth.connectedCount > 0 ? "#60a5fa"
                                                        : Services.Bluetooth.powered ? "#e5e7eb"
                                                        : "#6b7280"
                     // One-word/short status under the glyph. A single connected

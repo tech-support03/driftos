@@ -75,6 +75,7 @@ xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk
 xdg-user-dirs polkit-gnome wl-clipboard cliphist
 nautilus chromium discord
 ly seatd
+zsh zsh-completions zsh-autosuggestions zsh-syntax-highlighting
 ttf-jetbrains-mono-nerd ttf-firacode-nerd noto-fonts noto-fonts-emoji
 papirus-icon-theme adw-gtk-theme
 qt5-wayland qt6-wayland
@@ -380,7 +381,10 @@ do not paper over.
 5. Drop config files in place (this project's stubs).
 6. `mkdir -p ~/.config/wallpapers` and copy at least one image to
    `current.jpg`.
-7. `chsh -s /bin/bash` (or zsh — ask user).
+7. Login shell → **zsh** (chosen for fish-style autocomplete). `install.sh`
+   runs `chsh -s /usr/bin/zsh` idempotently after dotfiles are linked; the rc
+   is `dotfiles/zsh/.zshrc` (autosuggestions + syntax-highlighting + completion,
+   all official-repo packages from `01-base-packages.sh`).
 8. Reboot, log in via ly → Niri.
 9. Run testing checklist §9. If anything fails, **report it** — do
    not iterate silently.

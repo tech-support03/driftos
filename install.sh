@@ -128,6 +128,24 @@ run_mod 07-services.sh
 run_mod 08-link-dotfiles.sh
 run_mod 09-wallpapers.sh
 
+# ---- Login shell → zsh (autocomplete) --------------------------------------
+# zsh + zsh-autosuggestions give the fish-style inline autocomplete; the rc was
+# linked to ~/.zshrc by module 08. Flip the login shell here, after the rc
+# exists, so the first zsh login already has the config. Idempotent: only runs
+# chsh when the current shell isn't already zsh. `sudo chsh` avoids a password
+# prompt mid-install (plain chsh would block on one).
+ZSH_BIN="$(command -v zsh || echo /usr/bin/zsh)"
+if [[ "$(getent passwd "$USER" | cut -d: -f7)" != "$ZSH_BIN" ]]; then
+    log "Setting login shell → $ZSH_BIN"
+    if sudo chsh -s "$ZSH_BIN" "$USER"; then
+        ok "login shell is now zsh (takes effect at next login)"
+    else
+        warn "chsh failed; run 'chsh -s $ZSH_BIN' manually"
+    fi
+else
+    ok "login shell already zsh"
+fi
+
 c_green ""
 c_green "═══════════════════════════════════════════════════════════"
 c_green "  Setup complete. Reboot, then select 'Niri' at greetd/tty."

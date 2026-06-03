@@ -7,7 +7,7 @@ Item {
     property var bars: []
     property int barCount: 44
     property real maxValue: 1000
-    property color barColor: "#a78bfa"
+    property color barColor: "#5b6ee0"
 
     // bar=3, gap=2 → 44*5-2=218px wide, 28px tall (was 305×42)
     implicitWidth: barCount * 5 - 2

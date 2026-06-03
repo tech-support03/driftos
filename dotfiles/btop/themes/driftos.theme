@@ -1,6 +1,6 @@
-# driftos — purple-accented btop theme that matches the rest of the rice.
-# Accent #c5b3ff drives CPU/processes; #a5d8ff and #b5f0d4 echo Theme.qml's
-# accent2 (cool blue) and accent3 (mint) for memory and network panels.
+# driftos — indigo-accented btop theme that matches the rest of the rice.
+# Accent #5b6ee0 (indigo hero) drives CPU/processes; #a5d8ff and #b5f0d4 echo
+# Theme.qml's accent2 (cool blue) and accent3 (mint) for memory and network.
 
 # Transparent background — alacritty already provides translucency.
 theme[main_bg]=""
@@ -9,10 +9,10 @@ theme[main_fg]="#f4f4f6"
 theme[title]="#f4f4f6"
 
 # Highlight color for keyboard shortcuts (the bracketed letters)
-theme[hi_fg]="#c5b3ff"
+theme[hi_fg]="#5b6ee0"
 
 # Selected process row
-theme[selected_bg]="#c5b3ff"
+theme[selected_bg]="#5b6ee0"
 theme[selected_fg]="#12131a"
 
 # Disabled / dimmed text
@@ -25,26 +25,26 @@ theme[graph_text]="#f4f4f6"
 theme[meter_bg]="#23232c"
 
 # Mini cpu graphs in the process box, memory details, etc.
-theme[proc_misc]="#c5b3ff"
+theme[proc_misc]="#5b6ee0"
 
 # Box outlines — vary so panels stay visually distinct.
-theme[cpu_box]="#c5b3ff"
+theme[cpu_box]="#5b6ee0"
 theme[mem_box]="#a5d8ff"
 theme[net_box]="#b5f0d4"
-theme[proc_box]="#c5b3ff"
+theme[proc_box]="#5b6ee0"
 
 # Dividers inside boxes
 theme[div_line]="#2a2a35"
 
-# Temperature gradient: cool purple → bright lavender → warning pink
-theme[temp_start]="#6e5cae"
-theme[temp_mid]="#c5b3ff"
+# Temperature gradient: deep indigo → indigo → warning pink
+theme[temp_start]="#3d4bb8"
+theme[temp_mid]="#5b6ee0"
 theme[temp_end]="#e87fc3"
 
 # CPU usage gradient
-theme[cpu_start]="#6e5cae"
-theme[cpu_mid]="#a78bfa"
-theme[cpu_end]="#c5b3ff"
+theme[cpu_start]="#3d4bb8"
+theme[cpu_mid]="#5b6ee0"
+theme[cpu_end]="#8a9bf5"
 
 # Mem/Disk free meter (mint)
 theme[free_start]="#4a8268"
@@ -61,15 +61,15 @@ theme[available_start]="#5a8aab"
 theme[available_mid]="#8ab5d9"
 theme[available_end]="#b5dcff"
 
-# Mem/Disk used meter (warm, drifts to danger red)
-theme[used_start]="#8c5b4a"
-theme[used_mid]="#d49880"
-theme[used_end]="#e87575"
+# Mem/Disk used meter (cool — deep blue → spec blue → cyan)
+theme[used_start]="#3a6ea5"
+theme[used_mid]="#60a5fa"
+theme[used_end]="#22d3ee"
 
-# Download (incoming) — purple
-theme[download_start]="#6e5cae"
-theme[download_mid]="#a78bfa"
-theme[download_end]="#c5b3ff"
+# Download (incoming) — indigo
+theme[download_start]="#3d4bb8"
+theme[download_mid]="#5b6ee0"
+theme[download_end]="#8a9bf5"
 
 # Upload (outgoing) — mint to balance the panel
 theme[upload_start]="#4a8268"
@@ -78,5 +78,5 @@ theme[upload_end]="#b5f0d4"
 
 # Process box gradient (low CPU → high CPU)
 theme[process_start]="#5e5e66"
-theme[process_mid]="#a78bfa"
-theme[process_end]="#c5b3ff"
+theme[process_mid]="#5b6ee0"
+theme[process_end]="#8a9bf5"

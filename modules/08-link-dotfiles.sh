@@ -55,6 +55,12 @@ link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
 # Terminal, notifications, audio visualizer, system utilities.
 link "$DOTFILES_DIR/alacritty/alacritty.toml"   "$HOME/.config/alacritty/alacritty.toml"
+# Interactive shell rc. Unlike the others this lives at ~/.zshrc, not under
+# ~/.config — zsh reads $ZDOTDIR/.zshrc and $ZDOTDIR defaults to $HOME. The
+# fish-style autocomplete (autosuggestions + syntax highlighting + completion)
+# is wired up here; packages come from 01-base-packages.sh and the login shell
+# is switched to zsh in install.sh.
+link "$DOTFILES_DIR/zsh/.zshrc"                 "$HOME/.zshrc"
 link "$DOTFILES_DIR/gtk-3.0/settings.ini"       "$HOME/.config/gtk-3.0/settings.ini"
 link "$DOTFILES_DIR/gtk-4.0/settings.ini"       "$HOME/.config/gtk-4.0/settings.ini"
 link "$DOTFILES_DIR/mako/config"                "$HOME/.config/mako/config"

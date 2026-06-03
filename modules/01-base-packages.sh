@@ -13,6 +13,13 @@ PKGS_CORE=(
     brightnessctl playerctl
     fastfetch htop btop fzf ripgrep fd bat eza zoxide jq
     alacritty
+    # Interactive shell: zsh + fish-style autocomplete. zsh-autosuggestions
+    # draws the grey inline suggestion from history; zsh-syntax-highlighting
+    # colours the command line as you type; zsh-completions adds extra compdef
+    # functions on top of zsh's built-in completion. All four are in the
+    # official repos (no AUR). chsh to zsh is done in install.sh; the rc lives
+    # at dotfiles/zsh/.zshrc and is linked by 08-link-dotfiles.sh.
+    zsh zsh-completions zsh-autosuggestions zsh-syntax-highlighting
     ttf-jetbrains-mono-nerd ttf-firacode-nerd noto-fonts noto-fonts-emoji
     noto-fonts-cjk papirus-icon-theme adw-gtk-theme
     python python-pip python-gobject
