@@ -375,9 +375,9 @@ Scope {
                     border.color: Qt.rgba(1, 1, 1, 0.06)
                     border.width: 1
                     Behavior on color { ColorAnimation { duration: 160 } }
-                    HoverHandler { id: battHover; cursorShape: Qt.PointingHandCursor }
-                    // Click opens the same flyout as the power button below.
-                    TapHandler { onTapped: root.launchShell("qs ipc call power toggle") }
+                    // Pure status readout (like the clock pill) — no tap action,
+                    // so it never opens the power flyout. Plain hover cursor.
+                    HoverHandler { id: battHover }
 
                     readonly property color accentTint: Services.Battery.low ? "#f43f5e"
                                                        : Services.Battery.charging ? "#4ade80"
