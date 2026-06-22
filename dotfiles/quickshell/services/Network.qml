@@ -26,6 +26,7 @@ QtObject {
     property int    wifiSignal:  0          // 0..100, current AP
     property bool   wifiEnabled: true
     property bool   ethernetUp:  false
+    property string localIp:     ""         // local IPv4 of the active uplink
 
     // ---- wifi scan results --------------------------------------------------
     // [{ ssid, signal (0..100), secured (bool), active (bool), saved (bool) }]
@@ -59,7 +60,8 @@ QtObject {
             "echo @@DEV@@;    nmcli -t -f TYPE,STATE,CONNECTION,DEVICE device status 2>/dev/null;" +
             "echo @@WIFI@@;   nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list 2>/dev/null;" +
             "echo @@SAVED@@;  nmcli -t -f NAME connection show 2>/dev/null;" +
-            "echo @@ROUTE@@;  ip -4 route show default 2>/dev/null; ip -6 route show default 2>/dev/null"]
+            "echo @@ROUTE@@;  ip -4 route show default 2>/dev/null; ip -6 route show default 2>/dev/null;" +
+            "echo @@ADDR@@;   ip -4 -o addr show scope global 2>/dev/null"]
         stdout: StdioCollector { onStreamFinished: net._ingest(this.text) }
     }
 
@@ -92,7 +94,7 @@ QtObject {
         try {
             const lines = (raw || "").split("\n")
             let section = ""
-            let radio = "enabled", devs = [], wifis = [], saved = [], routes = []
+            let radio = "enabled", devs = [], wifis = [], saved = [], routes = [], addrs = []
             for (let i = 0; i < lines.length; i++) {
                 const ln = lines[i]
                 if (ln.indexOf("@@") === 0) { section = ln; continue }
@@ -102,6 +104,7 @@ QtObject {
                 else if (section === "@@WIFI@@")  wifis.push(ln)
                 else if (section === "@@SAVED@@") saved.push(ln)
                 else if (section === "@@ROUTE@@") routes.push(ln)
+                else if (section === "@@ADDR@@")  addrs.push(ln)
             }
 
             wifiEnabled = (radio === "enabled")
@@ -144,6 +147,22 @@ QtObject {
                 if (!dev) continue
                 if (metric < bestMetric) { bestMetric = metric; routeDev = dev }
             }
+
+            // local IPv4 per device. `ip -4 -o addr show scope global` prints
+            //   2: enp8s0    inet 192.168.1.42/24 brd ... scope global ...
+            // so the device is field[1] and the dotted addr is field[3] before
+            // its /prefix. Pick the address on the active uplink (route dev),
+            // falling back to ethernet then wifi when there's no default route.
+            const devIp = {}
+            for (let a = 0; a < addrs.length; a++) {
+                const t = addrs[a].trim().split(/\s+/)
+                if (t.length < 4 || t[2] !== "inet") continue
+                const dev = t[1]
+                const ip  = t[3].split("/")[0]
+                if (devIp[dev] === undefined) devIp[dev] = ip
+            }
+            const ipDev = routeDev || ethDev || wifiDev
+            const ipNow = ipDev ? (devIp[ipDev] || "") : ""
 
             // saved connection names
             const savedList = []
@@ -201,13 +220,16 @@ QtObject {
                 primaryName = routeType === "wifi"
                     ? (activeSsid || devConn[routeDev] || wifiConn)
                     : devConn[routeDev]
+                localIp = ipNow
             } else if (ethDev !== null) {
                 primaryType = "ethernet"; connected = true; primaryName = ethConn
+                localIp = ipNow
             } else if (wifiDev !== null) {
                 primaryType = "wifi"; connected = true
                 primaryName = activeSsid || wifiConn
+                localIp = ipNow
             } else {
-                primaryType = "none"; connected = false; primaryName = ""
+                primaryType = "none"; connected = false; primaryName = ""; localIp = ""
             }
         } catch (e) {
             // malformed read — leave prior state, next tick recovers

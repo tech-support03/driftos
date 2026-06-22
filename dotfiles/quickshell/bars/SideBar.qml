@@ -195,11 +195,26 @@ Scope {
                 }
 
                 // ---- middle: app dock + launcher -----------------------------
+                // Centered in the *gap* between the top group (logo+workspaces)
+                // and the bottom stack — NOT the full sidebar height. Centering
+                // in the whole column let the dock's last icon drop down into the
+                // SystemMonitor pill on shorter screens; bounding it by the bottom
+                // stack's top edge (sysmonStack.y, converted to sidebar-local) and
+                // clamping to just below the top group guarantees no overlap.
                 Column {
                     id: dock
                     property real ui: win.ui
-                    anchors.verticalCenter: parent.verticalCenter
                     anchors.horizontalCenter: parent.horizontalCenter
+                    // Biased ~0.66 down the gap rather than dead-centered, so the
+                    // dock sits a little lower (smaller gap below it, larger above)
+                    // instead of floating high. Clamped so it never overlaps either
+                    // the top group or the bottom stack.
+                    y: {
+                        const topB = topCol.y + topCol.height
+                        const botB = sysmonStack.y - root.edgeGap
+                        const free = botB - topB - height
+                        return Math.max(topB + 8 * win.ui, topB + free * 0.66)
+                    }
                     spacing: 4 * win.ui
                     width: parent.width - 12
 
@@ -295,6 +310,8 @@ Scope {
                     tint: Services.Network.connected ? Theme.blue
                          : Services.Network.wifiEnabled ? "#8e8e96" : "#6b7280"
                     onActivated: root.launchShell("qs ipc call network toggle")
+                    // Hover readout: connection type / name / local IP.
+                    NetworkFlyout { show: parent.hovered; ui: win.ui }
                 }
 
                 // Bluetooth — its own pill widget under the network button (like
@@ -360,6 +377,8 @@ Scope {
                     onActivated: root.launchShell("pavucontrol")
                     onScrolledUp:   Services.Audio.setVolume("2%+")
                     onScrolledDown: Services.Audio.setVolume("2%-")
+                    // Hover readout: current volume level.
+                    VolumeFlyout { show: parent.hovered; ui: win.ui }
                 }
 
                 // Battery \u2014 laptop only. Self-gates on a real BAT* node so the
@@ -378,6 +397,9 @@ Scope {
                     // Pure status readout (like the clock pill) — no tap action,
                     // so it never opens the power flyout. Plain hover cursor.
                     HoverHandler { id: battHover }
+
+                    // Hover readout: percentage + estimated time remaining.
+                    BatteryFlyout { show: battHover.hovered; ui: win.ui }
 
                     readonly property color accentTint: Services.Battery.low ? "#f43f5e"
                                                        : Services.Battery.charging ? "#4ade80"
