@@ -13,6 +13,20 @@ mapfile -t imgs < <(find "$WP_DIR" -maxdepth 1 -type f \( -iname '*.jpg' -o -ina
 # Deterministic-on-startup but rotates across reboots: pick by day-of-year.
 idx=$(( $(date +%j) % ${#imgs[@]} ))
 
+# First-login race: niri brings the output up and kanshi re-applies its
+# display profile a few milliseconds later, reconfiguring that same output. A
+# wallpaper mapped in between races the reconfigure and comes up blank — which
+# is why a manual `wallpaper-next` (Mod+Shift+B) was needed to get a wallpaper
+# on boot. Wait for an output that has a current mode, then let kanshi settle,
+# before mapping the background.
+if command -v niri >/dev/null 2>&1; then
+    for _ in $(seq 1 50); do
+        niri msg --json outputs 2>/dev/null | grep -q '"current_mode":[0-9]' && break
+        sleep 0.1
+    done
+    sleep 0.5
+fi
+
 if command -v awww >/dev/null 2>&1; then
     WP_CLI=awww; WP_DAEMON=awww-daemon
 elif command -v swww >/dev/null 2>&1; then
@@ -35,8 +49,10 @@ if [[ -n "$WP_CLI" ]]; then
     "$WP_CLI" img "${imgs[$idx]}" "${TRANSITION_ARGS[@]}"
 elif command -v swaybg >/dev/null 2>&1; then
     pkill -x swaybg 2>/dev/null || true
-    swaybg -i "${imgs[$idx]}" -m fill &
-    disown
+    # setsid -f fully detaches swaybg from this short-lived init script so it
+    # outlives the spawn-at-startup scope and keeps redrawing on output changes.
+    setsid -f swaybg -i "${imgs[$idx]}" -m fill >/dev/null 2>&1 || \
+        { swaybg -i "${imgs[$idx]}" -m fill & disown; }
 else
     exit 0
 fi
