@@ -14,7 +14,7 @@
 # other shade — bright/dim/muted accents, the album-art tint, btop's gradients —
 # is DERIVED here, so you only ever choose four. Design mirrors `rice-profile`:
 #   • Quickshell reads ~/.config/rice/colors LIVE (Theme.qml FileView) → no restart.
-#   • btop / gtklock / fastfetch / zsh can't watch a file, so they're GENERATED
+#   • btop / hyprlock / fastfetch / zsh can't watch a file, so they're GENERATED
 #     from templates into ~/.config and pick up the change on next launch.
 set -Eeuo pipefail
 
@@ -26,7 +26,7 @@ COLORS_FILE="$RICE_DIR/colors"     # 4 hex lines — Quickshell Theme.qml reads 
 COLORS_SH="$RICE_DIR/colors.sh"    # shell vars — ~/.zshrc sources this for the prompt
 
 BTOP_THEME="$HOME/.config/btop/themes/driftos.theme"
-GTKLOCK_CSS="$HOME/.config/gtklock/style.css"
+HYPRLOCK_CONF="$HOME/.config/hypr/hyprlock.conf"
 FASTFETCH_CFG="$HOME/.config/fastfetch/config.jsonc"
 
 c_info() { printf '\033[34m::\033[0m %s\n' "$*"; }
@@ -91,7 +91,7 @@ apply_palette() {
 
     # 2) Everything that can't watch a file: derive shades + render in Python.
     C1="$C1" C2="$C2" C3="$C3" C4="$C4" \
-    TPL_DIR="$TPL_DIR" BTOP_THEME="$BTOP_THEME" GTKLOCK_CSS="$GTKLOCK_CSS" \
+    TPL_DIR="$TPL_DIR" BTOP_THEME="$BTOP_THEME" HYPRLOCK_CONF="$HYPRLOCK_CONF" \
     FASTFETCH_CFG="$FASTFETCH_CFG" COLORS_SH="$COLORS_SH" \
     python3 - "$@" <<'PY'
 import os, colorsys, re
@@ -117,7 +117,7 @@ P=dict(
     blue=c2, blue_bright=lighter(c2,1.30), cyan=c3, teal=c4,
 )
 
-# --- gtklock + fastfetch: substitute @TOKEN@ in the templates ---------------
+# --- hyprlock + fastfetch: substitute @TOKEN@ in the templates --------------
 def render(tpl, dst, repl):
     with open(tpl) as f: s=f.read()
     for k,v in repl.items(): s=s.replace(k,v)
@@ -128,8 +128,9 @@ def render(tpl, dst, repl):
     with open(dst,'w') as f: f.write(s)
 
 tpl=os.environ['TPL_DIR']
-render(os.path.join(tpl,'gtklock-style.css.tmpl'), os.environ['GTKLOCK_CSS'],
-       {'@ACCENT@': P['accent']})
+# hyprlock wants colours as rgba(rrggbbaa) — accent with no '#', opaque alpha.
+render(os.path.join(tpl,'hyprlock.conf.tmpl'), os.environ['HYPRLOCK_CONF'],
+       {'@ACCENT_RGBA@': 'rgba(%sff)' % P['accent'].lstrip('#')})
 render(os.path.join(tpl,'fastfetch-config.jsonc.tmpl'), os.environ['FASTFETCH_CFG'],
        {'@ACCENT_SGR@': sgr(P['accent']), '@CYAN_SGR@': sgr(P['cyan'])})
 

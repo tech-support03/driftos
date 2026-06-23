@@ -171,7 +171,7 @@ spawn-at-startup "xwayland-satellite"
 // come back with their session via --restore-last-session).
 spawn-at-startup "reopen-window"
 // No idle daemon: the system stays awake and unlocked until the user
-// acts. Lock is manual only (Mod+L → gtklock). Suspend/poweroff are
+// acts. Lock is manual only (Mod+L → hyprlock). Suspend/poweroff are
 // manual only (Quickshell power flyout). swayidle is intentionally not
 // spawned here.
 
@@ -185,7 +185,7 @@ binds {
     // Reopen the last closed window (Chrome's Ctrl+Shift+T, system-wide).
     // Browsers restore their session; other apps relaunch fresh.
     Mod+Ctrl+T         { spawn "reopen-window" "pop"; }
-    Mod+L              { spawn "sh" "-c" "pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini"; }
+    Mod+L              { spawn "sh" "-c" "pgrep -x hyprlock || hyprlock"; }
     Mod+Escape         { spawn "qs" "ipc" "call" "power" "toggle"; }
     Mod+Shift+B        { spawn "/home/arjun/.local/bin/wallpaper-next"; }
     // Toggle the light/full visual profile (cava, shadows, translucency, anims).

@@ -24,7 +24,7 @@ for name in "${!WALLS[@]}"; do
 done
 
 # Drop a wallpaper rotation/init script the niri config calls at startup.
-# wallpaper-init / wallpaper-next also regenerate the gtklock background
+# wallpaper-init / wallpaper-next also regenerate the hyprlock background
 # cache at ~/.cache/lockscreen-bg.jpg, so the lock surface tracks the
 # current desktop wallpaper without a separate pre-blur step here.
 install -Dm755 "$SCRIPTS_DIR/wallpaper-init.sh" "$HOME/.local/bin/wallpaper-init"

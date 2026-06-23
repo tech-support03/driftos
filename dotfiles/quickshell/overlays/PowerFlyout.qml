@@ -9,8 +9,8 @@
 // route through logind + polkit, so the active-session user can run them
 // without a password. NB: `loginctl` does NOT have these verbs (only
 // session/seat management), so the earlier loginctl-based wiring silently
-// failed. Lock matches the niri Mod+L invocation (gtklock is the only
-// lock surface).
+// failed. Lock matches the niri Mod+L invocation (hyprlock is the only
+// lock surface — parallel fingerprint + password).
 
 import QtQuick
 import Quickshell
@@ -30,7 +30,7 @@ Scope {
     // through execDetached was a no-op on this setup — wrapping it the same
     // way the Lock action is wrapped makes everything fire reliably.
     readonly property var actions: [
-        { label: "Lock",      glyph: "",  shell: "pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini", danger: false },
+        { label: "Lock",      glyph: "",  shell: "pgrep -x hyprlock || hyprlock", danger: false },
         { label: "Sign out",  glyph: "",  shell: "niri msg action quit --skip-confirmation",                                 danger: false },
         { label: "Suspend",   glyph: "",  shell: "systemctl suspend",                                                        danger: false },
         { label: "Reboot",    glyph: "",  shell: "systemctl reboot",                                                         danger: true  },

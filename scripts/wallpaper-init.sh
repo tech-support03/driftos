@@ -56,7 +56,7 @@ elif command -v swaybg >/dev/null 2>&1; then
 else
     exit 0
 fi
-# Pre-blurred copy for gtklock's lock background (kept in sync with wallpaper).
+# Pre-blurred copy for hyprlock's lock background (kept in sync with wallpaper).
 if command -v magick >/dev/null 2>&1; then
     magick "${imgs[$idx]}" -resize 2560x1440^ -gravity center -extent 2560x1440 \
         -blur 0x16 -modulate 72 "$HOME/.cache/lockscreen-bg.jpg" || true

@@ -1,6 +1,6 @@
 ---
 name: rice-theme
-description: Apply a 4-colour palette across the whole Arch rice (Quickshell bars/widgets/overlays, btop, gtklock, fastfetch, zsh prompt). TRIGGER when the user gives a palette / colours, or asks to theme, re-theme, recolour, or restyle the system, or to save/switch/list themes.
+description: Apply a 4-colour palette across the whole Arch rice (Quickshell bars/widgets/overlays, btop, hyprlock, fastfetch, zsh prompt). TRIGGER when the user gives a palette / colours, or asks to theme, re-theme, recolour, or restyle the system, or to save/switch/list themes.
 ---
 
 # Rice theming
@@ -14,7 +14,7 @@ you only ever choose four. The engine is `rice-theme` (a CLI on PATH;
 
 | Slot | Role | Drives |
 |---|---|---|
-| `c1` | **accent / hero** | borders, focus, active workspace, logo, prompt block, btop CPU, launcher selection, gtklock caret — everything "primary" |
+| `c1` | **accent / hero** | borders, focus, active workspace, logo, prompt block, btop CPU, launcher selection, hyprlock input accent — everything "primary" |
 | `c2` | **blue** | network / sound / bluetooth widgets, btop MEM, media-title (a brighter shade) |
 | `c3` | **cyan** | GPU, weather, btop "available"/temp peak, prompt tail |
 | `c4` | **teal** | disk, btop NET/free, prompt tail end |
@@ -35,7 +35,7 @@ placeholder), `blueBright`.
    rice-theme apply-colors <c1> <c2> <c3> <c4>
    ```
    This writes `~/.config/rice/colors` (Quickshell re-themes **live** via
-   `Theme.qml`'s FileView) and regenerates btop/gtklock/fastfetch + the zsh
+   `Theme.qml`'s FileView) and regenerates btop/hyprlock/fastfetch + the zsh
    prompt colours. No restart.
 3. Only when the user says to keep it: `rice-theme save <name>` (snapshots the
    live palette into `~/.config/rice/themes/<name>.theme`). Equivalent:
@@ -59,9 +59,9 @@ Theme **#1 is `indigo`** — the palette the rice shipped with
   bind to `Theme.<token>` in `dotfiles/quickshell/Theme.qml`, which reads the
   4 colours live from `~/.config/rice/colors`. **Never hardcode a hex in QML** —
   add/relabel a token in `Theme.qml` instead, or the surface won't follow themes.
-- **btop / gtklock / fastfetch / zsh**: can't watch a file, so `rice-theme`
+- **btop / hyprlock / fastfetch / zsh**: can't watch a file, so `rice-theme`
   GENERATES them from `dotfiles/rice/templates/*` (and inline for btop) into
-  `~/.config` on every switch. btop/gtklock/fastfetch reload on next launch;
+  `~/.config` on every switch. btop/hyprlock/fastfetch reload on next launch;
   the zsh prompt sources `~/.config/rice/colors.sh` (new terminals pick it up).
 
 ## Not themed on purpose

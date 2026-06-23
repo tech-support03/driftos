@@ -14,7 +14,7 @@ for the bars, launcher, and power flyout.
 - **Niri** compositor with custom keybinds and slightly springy window/workspace animations
 - **Quickshell**-driven UI: hover-reveal top bar dashboard, vertical 72px side bar,
   Launchpad-style launcher, translucent power flyout
-- **gtklock** lock screen with a pre-blurred copy of the live wallpaper
+- **hyprlock** lock screen (fingerprint *or* password, in parallel) with a pre-blurred copy of the live wallpaper
 - **mako** notifications, **cava**-driven waveform in the top bar when music plays
 - **kanshi** display profiles (vm / personal / laptop) auto-applied by `systemd --user`
 - **ly** TUI greeter on tty1 — no GUI display-manager dependency
@@ -35,7 +35,7 @@ for the bars, launcher, and power flyout.
 | --- | --- |
 | Compositor | Niri (scrollable-tiling Wayland) |
 | Shell / bars / launcher / power flyout | Quickshell (QML) |
-| Lock screen | gtklock — manual only, no idle daemon |
+| Lock screen | hyprlock — fingerprint or password (parallel); manual only, no idle daemon |
 | Notifications | mako |
 | Wallpaper | swaybg (or swww when installed) — animated cycle via `wallpaper-next` |
 | Audio | PipeWire + WirePlumber |
@@ -117,7 +117,7 @@ reference, environment-variable equivalents, and recipes for each profile.
 | `Super+Return` | alacritty |
 | `Super+Space` | toggle Quickshell launcher |
 | `Super+Escape` | toggle power flyout (Lock / Sign out / Suspend / Reboot / Power off) |
-| `Super+L` | lock (gtklock) |
+| `Super+L` | lock (hyprlock — fingerprint or password) |
 | `Super+W` | close window |
 | `Super+F` | maximize column |
 | `Super+Shift+F` | fullscreen window |
@@ -149,7 +149,7 @@ Reorder, add, or remove lines and save — Quickshell auto-reloads.
 
 Drop images into `~/Pictures/Wallpapers/`. Cycle with `Super+Shift+B`
 (or run `wallpaper-next` directly). The current pick is pre-blurred into
-`~/.cache/lockscreen-bg.jpg` so gtklock always tracks the desktop.
+`~/.cache/lockscreen-bg.jpg` so hyprlock always tracks the desktop.
 
 ### Display layout
 
@@ -330,7 +330,7 @@ Both paths land in the same end state. Path A is one fewer reboot.
 | -------------------------- | ----------------------------------------------- |
 | Niri config                | `~/.config/niri/config.kdl` (+ `monitor.kdl`)   |
 | Quickshell (bars/overlays) | `~/.config/quickshell/`                         |
-| Lock screen config         | `~/.config/gtklock/`                            |
+| Lock screen config         | `~/.config/hypr/hyprlock.conf` (rice-theme generated) |
 | Notification daemon        | `~/.config/mako/config`                         |
 | Display profiles           | `~/.config/kanshi/config`                       |
 | Wallpapers                 | `~/Pictures/Wallpapers/`                        |

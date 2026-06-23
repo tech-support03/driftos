@@ -37,12 +37,12 @@ until you `save` them** (or click-create in the picker).
    singleton) and re-derives every token **live — no restart**.
 2. Derives all shades and **generates** the configs that can't watch a file:
    - `~/.config/btop/themes/driftos.theme` (emitted by the script)
-   - `~/.config/gtklock/style.css` (from `dotfiles/rice/templates/gtklock-style.css.tmpl`)
+   - `~/.config/hypr/hyprlock.conf` (from `dotfiles/rice/templates/hyprlock.conf.tmpl`)
    - `~/.config/fastfetch/config.jsonc` (from `…/fastfetch-config.jsonc.tmpl`)
    - `~/.config/rice/colors.sh` — shell vars the **zsh prompt** sources
 3. Sends a `notify-send` toast (on cycle).
 
-btop/gtklock/fastfetch pick up the change on next launch; the zsh prompt on the
+btop/hyprlock/fastfetch pick up the change on next launch; the zsh prompt on the
 next new terminal.
 
 ### Derived tokens
@@ -65,7 +65,7 @@ for everything else.
 | Quickshell calendar | "today", ‹ › arrows | — | — | — |
 | Quickshell launcher / power flyout | selection border / icons | — | — | — |
 | btop | CPU, temp, download, hi/selected/boxes | MEM box, "used" ramp, cached | "available", temp peak | NET box, free, upload |
-| gtklock | caret + focus border | — | — | — |
+| hyprlock | input field accent (`check_color`) | — | — | — |
 | fastfetch | title + Arch logo | — | keys | — |
 | zsh prompt | user\|host block + dim 2nd block | tail | tail | tail end |
 

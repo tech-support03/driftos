@@ -2,10 +2,10 @@
 // Wires up the TopBar (hover-reveal dashboard). Each component lives in
 // its own file; this just instantiates them.
 //
-// The lock screen is NOT handled by Quickshell — it's gtklock, fired
+// The lock screen is NOT handled by Quickshell — it's hyprlock, fired
 // only by the Mod+L keybind in niri. Quickshell's WlSessionLock proved
-// unstable, so per CLAUDE.md the approved fallback (gtklock) owns locking.
-// No idle daemon — lock is manual-only.
+// unstable; hyprlock owns locking (parallel fingerprint + password, per
+// CLAUDE.md §6). No idle daemon — lock is manual-only.
 //
 // IMPORTANT: keep this file thin. Logic goes in services/, UI goes in
 // bars/. Theme tokens come from Theme.qml — never hardcode a color here.
