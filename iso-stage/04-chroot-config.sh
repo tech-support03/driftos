@@ -71,8 +71,46 @@ EOF
 visudo -cf /etc/sudoers.d/10-wheel >/dev/null || die "sudoers drop-in failed validation"
 
 # ---- network ---------------------------------------------------------------
-log "Enabling NetworkManager"
-systemctl enable NetworkManager.service
+# Wifi = iwd standalone; wired = systemd-networkd. No NetworkManager (it fought
+# iwd on this hardware). The full iwd/networkd/polkit config + service enable is
+# done post-install by modules/07-services.sh; here we just make sure first boot
+# can reach the network: enable the daemons and seed a static resolver. DNS is a
+# static file by design (the live box layers WARP on top) — no systemd-resolved.
+log "Enabling iwd + systemd-networkd"
+systemctl enable iwd.service
+systemctl enable systemd-networkd.service
+
+install -Dm644 /dev/stdin /etc/systemd/network/20-wired.network <<'EOF'
+# Wired NIC via systemd-networkd; DHCP for address + routes only (DNS left to
+# the static /etc/resolv.conf). Low metric so a plugged cable beats wifi;
+# RequiredForOnline=no so an unplugged cable never stalls boot.
+[Match]
+Name=en*
+
+[Network]
+DHCP=yes
+
+[Link]
+RequiredForOnline=no
+
+[DHCPv4]
+RouteMetric=100
+UseDNS=no
+
+[IPv6AcceptRA]
+RouteMetric=100
+UseDNS=no
+EOF
+
+install -Dm644 /dev/stdin /etc/iwd/main.conf <<'EOF'
+[General]
+EnableNetworkConfiguration=true
+
+[Network]
+NameResolvingService=none
+EOF
+
+printf 'nameserver 1.1.1.1\nnameserver 8.8.8.8\n' > /etc/resolv.conf
 
 # ---- laptop-only services + lid behavior -----------------------------------
 if [[ "${PROFILE:-}" == "laptop" ]]; then
@@ -80,8 +118,6 @@ if [[ "${PROFILE:-}" == "laptop" ]]; then
     systemctl enable tlp.service     2>/dev/null || true
     systemctl enable acpid.service   2>/dev/null || true
     systemctl enable bluetooth.service 2>/dev/null || true
-    # TLP's RDW (radio device wizard) responds to NM events for radio toggling.
-    systemctl enable NetworkManager-dispatcher.service 2>/dev/null || true
 
     install -Dm644 /dev/stdin /etc/systemd/logind.conf.d/50-laptop.conf <<'EOF'
 [Login]

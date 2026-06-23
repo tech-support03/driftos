@@ -11,7 +11,8 @@
 //
 // bluetoothctl ships with bluez-utils and lives in /usr/bin on Arch, so it
 // resolves on the quickshell PATH without a wrapper. There's no clean
-// event-stream equivalent to `nmcli monitor`, so this leans on the timer poll
+// event-stream wired up here (cf. Network.qml's `busctl monitor`), so this
+// leans on the timer poll
 // (sped up during a scan) plus refresh-after-action.
 
 pragma Singleton
@@ -215,7 +216,7 @@ QtObject {
     // Connect a known/paired device. Unpaired devices need pair+trust first;
     // bundle the three so a fresh device "just connects" from one tap. Anything
     // that needs a PIN/passkey agent falls to blueman-manager (the flyout's
-    // Advanced button), same as wifi-enterprise → nmtui.
+    // Advanced button), same as wifi-enterprise → iwctl in a terminal.
     function connect(mac, paired) {
         if (paired)
             _run(["bluetoothctl", "connect", mac])

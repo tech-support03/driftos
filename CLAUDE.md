@@ -43,7 +43,7 @@ expected). Match it precisely.
 | Notifications | **mako** | DBus daemon; Quickshell custom widget not yet built |
 | Wallpaper | **swaybg** (or **swww** if present) | swaybg is the default; wallpaper-init.sh prefers swww when installed |
 | Audio | **PipeWire + WirePlumber** | Standard |
-| Network | **NetworkManager** | Standard, queried by Quickshell |
+| Network | **iwd** (wifi) + **systemd-networkd** (wired) | NetworkManager removed — it fought iwd. Quickshell queries iwd over DBus + `ip`. See §Networking |
 | Bluetooth | **BlueZ + bluetuith** (CLI) | Quickshell shows status via DBus |
 | Idle / autolock | _none_ | Lock is manual-only (`Mod+L`); system never auto-sleeps |
 | Terminal | **alacritty** | GPU-accelerated, Wayland-native |
@@ -70,7 +70,7 @@ Authoritative lists live in `modules/01-base-packages.sh` and
 ```
 niri alacritty quickshell gtklock mako swaybg cava
 pipewire pipewire-pulse pipewire-alsa wireplumber pavucontrol
-networkmanager bluez bluez-utils blueman
+iwd bluez bluez-utils blueman
 xdg-desktop-portal xdg-desktop-portal-gnome xdg-desktop-portal-gtk
 xdg-user-dirs polkit-gnome wl-clipboard cliphist
 nautilus chromium discord
@@ -95,10 +95,40 @@ Enable `[multilib]` in `/etc/pacman.conf` for steam.
 
 ### Services to enable
 ```bash
-systemctl enable --now NetworkManager bluetooth seatd
+systemctl enable --now iwd systemd-networkd bluetooth seatd
 systemctl enable ly@tty1.service           # greeter on tty1
 systemctl --user enable --now pipewire pipewire-pulse wireplumber kanshi
 ```
+> **Do NOT enable `systemd-resolved`.** DNS is a static `/etc/resolv.conf`
+> (the daily-driver layers Cloudflare WARP over it); resolved would seize DNS
+> and re-break the school content-filter path. See §Networking.
+
+### Networking (iwd + systemd-networkd)
+
+NetworkManager is **gone** — it fought iwd on this hardware. The split is:
+
+- **Wifi → iwd, standalone.** iwd does association *and* its own DHCP/routes
+  (`/etc/iwd/main.conf` → `[General] EnableNetworkConfiguration=true`). It does
+  **not** manage DNS (`[Network] NameResolvingService=none`).
+- **Wired → systemd-networkd**, the wired NIC only (`/etc/systemd/network/20-wired.network`,
+  `[Match] Name=en*`). DHCP for address + routes only (`UseDNS=no`).
+  `RouteMetric=100` makes a plugged-in cable **auto-win** over wifi (~308);
+  `RequiredForOnline=no` so an unplugged cable never stalls boot. networkd
+  leaves `wlan0` *unmanaged* — iwd keeps it.
+- **DNS → static `/etc/resolv.conf`** (`1.1.1.1`/`8.8.8.8`) with WARP on top.
+  Nothing live rewrites it. **No systemd-resolved.**
+- **Manual override:** a polkit rule (`/etc/polkit-1/rules.d/50-networkd-links.rules`,
+  action `org.freedesktop.network1.manage-links`) lets the active session run
+  `networkctl up/down` passwordless, so the flyout's Ethernet toggle can force
+  wifi without unplugging.
+
+Quickshell's `services/Network.qml` is the single source of truth for the UI:
+it queries iwd over DBus via `busctl` (scan list, saved networks, radio power,
+active connection) and reads `ip` for routes / local IP / the wired NIC. **No
+`nmcli`/`nmtui` anywhere** — actions shell out to `iwctl` (wifi) and
+`networkctl` (wired). All three `/etc` files above are written by
+`modules/07-services.sh` (and seeded in the ISO path by
+`iso-stage/04-chroot-config.sh`).
 
 ---
 

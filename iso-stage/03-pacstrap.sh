@@ -10,8 +10,9 @@ BASE_PKGS=(
     mkinitcpio
     sudo
     git vim
-    networkmanager
-    iwd wpa_supplicant
+    # Wifi is iwd standalone; wired is systemd-networkd (in systemd). No
+    # NetworkManager / wpa_supplicant — iwd has its own supplicant.
+    iwd
     e2fsprogs dosfstools
     pciutils usbutils
     man-db man-pages

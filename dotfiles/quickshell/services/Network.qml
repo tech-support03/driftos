@@ -1,14 +1,23 @@
 // ~/.config/quickshell/services/Network.qml
-// Singleton NetworkManager provider. Polls `nmcli` and exposes reactive
-// state for the SideBar's network button + the NetworkFlyout manager.
+// Singleton iwd provider. Queries iwd over its system-bus DBus API (via the
+// always-present `busctl`) and exposes reactive state for the SideBar's network
+// button + the NetworkFlyout manager.
 //
-// One bundled `sh -c` poll per tick (radio + device status + wifi list +
-// saved connections, split by markers) — mirrors SysStats' single-process
-// philosophy. Actions (connect / disconnect / toggle / rescan) run as their
-// own short-lived Process and refresh the state on exit.
+// This box runs **iwd standalone** (NetworkManager is disabled — it fought iwd),
+// so there is no nmcli to talk to. iwd is the source of truth for wifi: scan
+// results, saved ("known") networks, the active connection and radio power all
+// come from `net.connman.iwd` on the system bus. The local IPv4 / default-route
+// (and any ethernet uplink) still come from plain `ip`, which is backend-neutral.
 //
-// nmcli lives in /usr/bin on Arch (the /usr/sbin entry is a symlink), so it
-// resolves on the quickshell process PATH without a wrapper script.
+// One bundled `sh -c` poll per tick:
+//   * busctl GetManagedObjects (JSON) — whole iwd object tree in one call:
+//     Device (radio power), Station (state + connected network), Network
+//     (scan results) and KnownNetwork (saved) objects.
+//   * ip route / ip addr — default uplink + local address.
+// iwd exposes per-AP signal only via Station.GetOrderedNetworks (not as an
+// object property), so a tiny follow-up busctl call merges RSSI once the poll
+// has discovered the station path. Actions (connect / disconnect / forget /
+// power / scan) shell out to `iwctl` and re-poll on exit.
 
 pragma Singleton
 
@@ -22,20 +31,34 @@ QtObject {
     // ---- primary link state -------------------------------------------------
     property string primaryType: "none"   // "wifi" | "ethernet" | "none"
     property bool   connected:   false
-    property string primaryName: ""        // SSID or wired connection name
+    property string primaryName: ""        // SSID or wired device name
     property int    wifiSignal:  0          // 0..100, current AP
     property bool   wifiEnabled: true
-    property bool   ethernetUp:  false
+    property bool   ethernetUp:  false      // wired link is the active uplink
     property string localIp:     ""         // local IPv4 of the active uplink
 
+    // ---- wired link (manual-override toggle) --------------------------------
+    // networkd manages the wired NIC; iwd only does wifi. A plugged-in cable
+    // auto-wins on route metric, but the flyout can also force it off/on.
+    property bool   ethernetPresent: false  // an en* device exists
+    property bool   ethernetEnabled: true   // admin-up (the override target)
+    property bool   ethernetPlugged: false  // carrier present (cable in)
+
     // ---- wifi scan results --------------------------------------------------
-    // [{ ssid, signal (0..100), secured (bool), active (bool), saved (bool) }]
+    // [{ ssid, signal (0..100), secured (bool), enterprise (bool),
+    //    active (bool), saved (bool) }]
     property var    networks:  []
     property var    savedNames: []
     property bool   scanning:  false
     property string lastError: ""
 
     signal actionFinished(bool ok, string message)
+
+    // ---- iwd topology (discovered each poll) --------------------------------
+    property string _wifiDev:     "wlan0"  // station device name, for iwctl
+    property string _stationPath: ""        // DBus path of the station device
+    property var    _rssiByPath:  ({})      // network object path -> rssi (dBm*100)
+    property string _ethDev:      ""        // wired device name, for networkctl
 
     // ---- glyphs (nerd font, Material Design wifi-strength set) ---------------
     function signalGlyph(s) {
@@ -53,19 +76,33 @@ QtObject {
         return "󰤯"                                    // disconnected
     }
 
+    // iwd RSSI is reported in dBm×100. Map to a 0..100 bar the UI can show:
+    // ~-100 dBm (unusable) → 0, ~-50 dBm (excellent) → 100, clamped.
+    function _rssiToPercent(rssi) {
+        const dbm = rssi / 100.0
+        return Math.max(0, Math.min(100, Math.round(2 * (dbm + 100))))
+    }
+
     // ---- single bundled status poll -----------------------------------------
     readonly property Process _poll: Process {
         command: ["sh", "-c",
-            "echo @@RADIO@@;  nmcli -t radio wifi 2>/dev/null;" +
-            "echo @@DEV@@;    nmcli -t -f TYPE,STATE,CONNECTION,DEVICE device status 2>/dev/null;" +
-            "echo @@WIFI@@;   nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list 2>/dev/null;" +
-            "echo @@SAVED@@;  nmcli -t -f NAME connection show 2>/dev/null;" +
-            "echo @@ROUTE@@;  ip -4 route show default 2>/dev/null; ip -6 route show default 2>/dev/null;" +
-            "echo @@ADDR@@;   ip -4 -o addr show scope global 2>/dev/null"]
+            "echo @@OBJ@@;" +
+            "busctl --system --json=short call net.connman.iwd / " +
+            "org.freedesktop.DBus.ObjectManager GetManagedObjects 2>/dev/null;" +
+            "echo; echo @@ROUTE@@; ip -4 route show default 2>/dev/null; ip -6 route show default 2>/dev/null;" +
+            "echo @@ADDR@@;   ip -4 -o addr show scope global 2>/dev/null;" +
+            "echo @@LINK@@;   ip -o link show 2>/dev/null"]
         stdout: StdioCollector { onStreamFinished: net._ingest(this.text) }
     }
 
-    // Backup poll. The nmcli monitor below makes switches reflect near-instantly;
+    // Follow-up: per-AP signal. Station.GetOrderedNetworks returns the visible
+    // networks in signal order as (object-path, rssi) pairs — the only place
+    // iwd surfaces RSSI. Merged into `networks` / `wifiSignal` once it returns.
+    readonly property Process _signalPoll: Process {
+        stdout: StdioCollector { onStreamFinished: net._ingestSignals(this.text) }
+    }
+
+    // Backup poll. The busctl monitor below makes switches reflect near-instantly;
     // this slow tick just catches anything the event stream might miss.
     readonly property Timer _tick: Timer {
         interval: 6000
@@ -75,12 +112,13 @@ QtObject {
         onTriggered: net._poll.running = true
     }
 
-    // Event-driven refresh: nmcli monitor emits a line on every NM state change
-    // (link up/down, default-route change, manual switch). Debounce a burst of
-    // those into a single re-poll so the icon follows the active uplink quickly.
+    // Event-driven refresh: `busctl monitor` emits a message on every iwd signal
+    // (PropertiesChanged on connect/disconnect/scan, InterfacesAdded/Removed for
+    // appearing networks). Debounce a burst of those into a single re-poll so the
+    // icon follows the active uplink quickly.
     readonly property Process _monitor: Process {
         running: true
-        command: ["nmcli", "monitor"]
+        command: ["busctl", "--system", "monitor", "net.connman.iwd"]
         stdout: SplitParser { onRead: net._debounce.restart() }
     }
     readonly property Timer _debounce: Timer {
@@ -92,49 +130,102 @@ QtObject {
 
     function _ingest(raw) {
         try {
-            const lines = (raw || "").split("\n")
-            let section = ""
-            let radio = "enabled", devs = [], wifis = [], saved = [], routes = [], addrs = []
-            for (let i = 0; i < lines.length; i++) {
-                const ln = lines[i]
-                if (ln.indexOf("@@") === 0) { section = ln; continue }
-                if (ln.length === 0) continue
-                if (section === "@@RADIO@@")  radio = ln.trim()
-                else if (section === "@@DEV@@")   devs.push(ln)
-                else if (section === "@@WIFI@@")  wifis.push(ln)
-                else if (section === "@@SAVED@@") saved.push(ln)
-                else if (section === "@@ROUTE@@") routes.push(ln)
-                else if (section === "@@ADDR@@")  addrs.push(ln)
+            const text = raw || ""
+            // Split the busctl JSON blob from the ip route/addr sections.
+            const objStart = text.indexOf("@@OBJ@@")
+            const routeStart = text.indexOf("@@ROUTE@@")
+            const addrStart = text.indexOf("@@ADDR@@")
+            const linkStart = text.indexOf("@@LINK@@")
+            const objJson = text.substring(objStart + 7, routeStart).trim()
+            const routeBlock = text.substring(routeStart + 9, addrStart)
+            const addrBlock = text.substring(addrStart + 8, linkStart)
+            const linkBlock = text.substring(linkStart + 8)
+
+            // ---- iwd object tree -------------------------------------------
+            let stationPath = "", wifiDev = "", stationState = "",
+                connectedNetPath = "", radioOn = true, scanningNow = false
+            const netByPath = {}       // path -> { ssid, type, connected, known }
+            const savedSet = {}
+
+            if (objJson.length) {
+                const parsed = JSON.parse(objJson)
+                const tree = (parsed.data && parsed.data[0]) || {}
+                for (const path in tree) {
+                    const ifaces = tree[path]
+                    const dev = ifaces["net.connman.iwd.Device"]
+                    const sta = ifaces["net.connman.iwd.Station"]
+                    const nw  = ifaces["net.connman.iwd.Network"]
+                    const kn  = ifaces["net.connman.iwd.KnownNetwork"]
+
+                    if (dev) {
+                        // The station device (Mode station) owns the radio power
+                        // flag and is the path we issue iwctl actions against.
+                        if (!sta && dev.Mode && dev.Mode.data !== "station") {
+                            // non-station device — ignore
+                        }
+                        if (sta || (dev.Mode && dev.Mode.data === "station")) {
+                            wifiDev = dev.Name ? dev.Name.data : wifiDev
+                            if (dev.Powered) radioOn = dev.Powered.data
+                        }
+                    }
+                    if (sta) {
+                        stationPath = path
+                        stationState = sta.State ? sta.State.data : ""
+                        scanningNow = sta.Scanning ? sta.Scanning.data : false
+                        connectedNetPath = sta.ConnectedNetwork ? sta.ConnectedNetwork.data : ""
+                    }
+                    if (nw) {
+                        netByPath[path] = {
+                            ssid: nw.Name ? nw.Name.data : "",
+                            type: nw.Type ? nw.Type.data : "open",
+                            connected: nw.Connected ? nw.Connected.data : false,
+                            known: !!(nw.KnownNetwork && nw.KnownNetwork.data &&
+                                      nw.KnownNetwork.data !== "/")
+                        }
+                    }
+                    if (kn && kn.Name) savedSet[kn.Name.data] = true
+                }
             }
 
-            wifiEnabled = (radio === "enabled")
+            if (wifiDev.length) _wifiDev = wifiDev
+            _stationPath = stationPath
+            wifiEnabled = radioOn
+            scanning = scanningNow
 
-            // device status: TYPE:STATE:CONNECTION:DEVICE (CONNECTION may have
-            // colons, DEVICE is last). Build dev→{type,conn} and remember which
-            // ethernet/wifi devices are link-connected (fallback if no default).
-            const devType = {}, devConn = {}
-            let ethDev = null, ethConn = null, wifiDev = null, wifiConn = null
-            for (let d = 0; d < devs.length; d++) {
-                const f = devs[d].split(":")
-                if (f.length < 4) continue
-                const type = f[0]
-                const state = f[1]
-                const dev  = f[f.length - 1]
-                const conn = f.slice(2, f.length - 1).join(":")
-                devType[dev] = type
-                devConn[dev] = conn
-                if (state !== "connected") continue
-                if (type === "ethernet") { ethDev = dev; ethConn = conn }
-                else if (type === "wifi") { wifiDev = dev; wifiConn = conn }
+            // saved ("known") network names
+            const savedList = []
+            for (const nm in savedSet) savedList.push(nm)
+            savedNames = savedList
+
+            // wifi list from Network objects. Signal merged later by GetOrderedNetworks;
+            // seed each entry's signal from the last RSSI map so the bars don't blank.
+            const list = []
+            const connectedSsid = (connectedNetPath && netByPath[connectedNetPath])
+                ? netByPath[connectedNetPath].ssid : ""
+            for (const p in netByPath) {
+                const n = netByPath[p]
+                if (!n.ssid.length) continue
+                const rssi = _rssiByPath[p]
+                list.push({
+                    _path:   p,
+                    ssid:    n.ssid,
+                    signal:  rssi !== undefined ? _rssiToPercent(rssi) : 0,
+                    secured: n.type !== "open",
+                    enterprise: n.type === "8021x",
+                    active:  n.connected,
+                    saved:   n.known || savedList.indexOf(n.ssid) !== -1
+                })
             }
-            ethernetUp = (ethDev !== null)
+            list.sort(function(a, b) {
+                if (a.active !== b.active) return a.active ? -1 : 1
+                return b.signal - a.signal
+            })
+            networks = list
 
-            // default routes: pick the active uplink as the dev with the lowest
-            // route metric. NetworkManager gives ethernet a lower metric than
-            // wifi, so ethernet is preferred automatically; if the user drops
-            // ethernet or reprioritizes, the default route — and this pick —
-            // follow. Lines look like:
-            //   default via 192.168.1.1 dev enp8s0 proto dhcp ... metric 100
+            const wifiConnected = (stationState === "connected" && connectedSsid.length)
+
+            // ---- default route + local address (backend-neutral) -----------
+            const routes = routeBlock.split("\n")
             let routeDev = null, bestMetric = Infinity
             for (let r = 0; r < routes.length; r++) {
                 const t = routes[r].trim().split(/\s+/)
@@ -148,11 +239,7 @@ QtObject {
                 if (metric < bestMetric) { bestMetric = metric; routeDev = dev }
             }
 
-            // local IPv4 per device. `ip -4 -o addr show scope global` prints
-            //   2: enp8s0    inet 192.168.1.42/24 brd ... scope global ...
-            // so the device is field[1] and the dotted addr is field[3] before
-            // its /prefix. Pick the address on the active uplink (route dev),
-            // falling back to ethernet then wifi when there's no default route.
+            const addrs = addrBlock.split("\n")
             const devIp = {}
             for (let a = 0; a < addrs.length; a++) {
                 const t = addrs[a].trim().split(/\s+/)
@@ -161,78 +248,88 @@ QtObject {
                 const ip  = t[3].split("/")[0]
                 if (devIp[dev] === undefined) devIp[dev] = ip
             }
-            const ipDev = routeDev || ethDev || wifiDev
-            const ipNow = ipDev ? (devIp[ipDev] || "") : ""
 
-            // saved connection names
-            const savedList = []
-            for (let s = 0; s < saved.length; s++)
-                if (saved[s].length) savedList.push(saved[s])
-            savedNames = savedList
-
-            // wifi list: IN-USE:SIGNAL:SECURITY:SSID (SSID last, may hold colons)
-            const seen = {}
-            const list = []
-            let activeSsid = "", activeSig = 0
-            for (let w = 0; w < wifis.length; w++) {
-                const f = wifis[w].split(":")
-                if (f.length < 4) continue
-                const inUse = f[0] === "*"
-                const sig = parseInt(f[1]) || 0
-                const sec = f[2]
-                const ssid = f.slice(3).join(":")
-                if (!ssid.length) continue
-                const secured = sec.length > 0 && sec !== "--"
-                // 802.1X = WPA2/WPA3-Enterprise: needs a username + EAP method,
-                // not a single PSK. The flyout hands these to nmtui instead of
-                // showing a (useless) password box.
-                const enterprise = sec.indexOf("802.1X") !== -1
-                if (inUse) { activeSsid = ssid; activeSig = sig }
-                // dedupe by SSID, keep strongest signal
-                if (seen[ssid] !== undefined) {
-                    if (sig > list[seen[ssid]].signal) {
-                        list[seen[ssid]].signal = sig
-                        list[seen[ssid]].active = list[seen[ssid]].active || inUse
-                    }
-                    continue
-                }
-                seen[ssid] = list.length
-                list.push({
-                    ssid: ssid, signal: sig, secured: secured, enterprise: enterprise,
-                    active: inUse, saved: savedList.indexOf(ssid) !== -1
-                })
+            // wired NIC discovery from `ip -o link show`. Lines look like:
+            //   3: enp197s0f4u1u1: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 ...
+            // The flags carry admin state (UP) and carrier (LOWER_UP). Track the
+            // first en* device so the override toggle has a target even when the
+            // link is down (no IP / no route to infer it from).
+            const links = linkBlock.split("\n")
+            let ethDev = "", ethAdminUp = false, ethCarrier = false
+            for (let l = 0; l < links.length; l++) {
+                const m = links[l].trim().match(/^\d+:\s+([^:@\s]+)(?:@\S+)?:\s+<([^>]*)>/)
+                if (!m) continue
+                const name = m[1]
+                if (!/^en/.test(name)) continue   // physical ethernet only
+                const flags = m[2].split(",")
+                ethDev = name
+                ethAdminUp = flags.indexOf("UP") !== -1
+                ethCarrier = flags.indexOf("LOWER_UP") !== -1
+                break
             }
-            list.sort(function(a, b) {
-                if (a.active !== b.active) return a.active ? -1 : 1
-                return b.signal - a.signal
-            })
-            networks = list
+            _ethDev = ethDev
+            ethernetPresent = ethDev.length > 0
+            ethernetEnabled = ethAdminUp
+            ethernetPlugged = ethCarrier
 
-            // fold everything into the primary-link summary. Prefer the device
-            // that owns the default route (the connection actually carrying
-            // traffic); fall back to a link-connected device — ethernet first —
-            // when there's no default route (e.g. captive/no-gateway link).
-            wifiSignal = activeSig
-            const routeType = routeDev ? devType[routeDev] : ""
-            if (routeType === "ethernet" || routeType === "wifi") {
-                primaryType = routeType
-                connected = true
-                primaryName = routeType === "wifi"
-                    ? (activeSsid || devConn[routeDev] || wifiConn)
-                    : devConn[routeDev]
-                localIp = ipNow
-            } else if (ethDev !== null) {
-                primaryType = "ethernet"; connected = true; primaryName = ethConn
-                localIp = ipNow
-            } else if (wifiDev !== null) {
+            // An ethernet uplink = a default-route device that isn't the wifi
+            // station and isn't a virtual link (wl*, tailscale, lo). networkd
+            // gives the wired NIC a lower route metric, so a plugged cable wins.
+            const isWired = routeDev && routeDev !== _wifiDev
+                && !/^(wl|lo|tailscale|docker|veth|virbr|tun)/.test(routeDev)
+            ethernetUp = !!isWired
+
+            // ---- fold into the primary-link summary ------------------------
+            if (isWired) {
+                primaryType = "ethernet"; connected = true
+                primaryName = routeDev
+                localIp = devIp[routeDev] || ""
+            } else if (wifiConnected) {
                 primaryType = "wifi"; connected = true
-                primaryName = activeSsid || wifiConn
-                localIp = ipNow
+                primaryName = connectedSsid
+                localIp = devIp[_wifiDev] || (routeDev ? (devIp[routeDev] || "") : "")
+                // wifiSignal is set from the connected entry; GetOrderedNetworks refines it.
+                for (let i = 0; i < list.length; i++)
+                    if (list[i].active) { wifiSignal = list[i].signal; break }
             } else {
-                primaryType = "none"; connected = false; primaryName = ""; localIp = ""
+                primaryType = "none"; connected = false
+                primaryName = ""; localIp = ""; wifiSignal = 0
+            }
+
+            // refine RSSI for the network list + connected AP
+            if (_stationPath.length && !_signalPoll.running) {
+                _signalPoll.command = ["busctl", "--system", "call",
+                    "net.connman.iwd", _stationPath,
+                    "net.connman.iwd.Station", "GetOrderedNetworks"]
+                _signalPoll.running = true
             }
         } catch (e) {
             // malformed read — leave prior state, next tick recovers
+        }
+    }
+
+    // Merge Station.GetOrderedNetworks output:  a(on) <count> "<path>" <rssi> ...
+    function _ingestSignals(raw) {
+        try {
+            const text = raw || ""
+            const re = /"(\/net\/connman\/iwd\/[^"]+)"\s+(-?\d+)/g
+            const map = {}
+            let m
+            while ((m = re.exec(text)) !== null) map[m[1]] = parseInt(m[2])
+            _rssiByPath = map
+
+            // re-apply onto the current list without re-polling iwd
+            const list = networks.slice()
+            let changed = false
+            for (let i = 0; i < list.length; i++) {
+                const rssi = map[list[i]._path]
+                if (rssi === undefined) continue
+                const pct = _rssiToPercent(rssi)
+                if (list[i].signal !== pct) { list[i].signal = pct; changed = true }
+                if (list[i].active) wifiSignal = pct
+            }
+            if (changed) networks = list
+        } catch (e) {
         }
     }
 
@@ -255,31 +352,48 @@ QtObject {
         _action.running = true
     }
 
-    // Connect to a wifi network. Open or already-saved networks need no
-    // password; secured + unknown ones require one.
+    // Connect to a wifi network via iwctl. Open or already-saved (known)
+    // networks need no passphrase; secured + unknown ones take one inline.
+    // 802.1X (enterprise) connects use the provisioning file in /var/lib/iwd —
+    // the flyout routes brand-new enterprise setups to a terminal instead.
     function connectWifi(ssid, secured, password) {
-        if (!secured || isSaved(ssid))
-            _run(["nmcli", "dev", "wifi", "connect", ssid])
+        if (!secured || isSaved(ssid) || !password || !password.length)
+            _run(["iwctl", "station", _wifiDev, "connect", ssid])
         else
-            _run(["nmcli", "dev", "wifi", "connect", ssid, "password", password])
+            _run(["iwctl", "--passphrase", password, "station", _wifiDev, "connect", ssid])
     }
     function disconnectWifi() {
-        // Bring the active wifi connection down by name.
-        if (primaryType === "wifi" && primaryName.length)
-            _run(["nmcli", "connection", "down", "id", primaryName])
+        _run(["iwctl", "station", _wifiDev, "disconnect"])
     }
-    function forget(ssid) { _run(["nmcli", "connection", "delete", "id", ssid]) }
+    function forget(ssid) { _run(["iwctl", "known-networks", ssid, "forget"]) }
 
     function setWifiEnabled(on) {
-        Quickshell.execDetached(["nmcli", "radio", "wifi", on ? "on" : "off"])
+        Quickshell.execDetached(["iwctl", "device", _wifiDev, "set-property",
+                                 "Powered", on ? "on" : "off"])
         wifiEnabled = on
         rescanTimer.restart()
     }
     function toggleWifi() { setWifiEnabled(!wifiEnabled) }
 
+    // Manual wired override: bring the networkd-managed link admin up/down. A
+    // polkit rule (org.freedesktop.network1.manage-links) lets the active
+    // session do this without a password. Downing the cable hands the default
+    // route back to wifi; upping it re-runs DHCP and the low metric wins again.
+    function setEthernetEnabled(on) {
+        if (!_ethDev.length) return
+        Quickshell.execDetached(["networkctl", on ? "up" : "down", _ethDev])
+        ethernetEnabled = on
+        _ethTimer.restart()
+    }
+    function toggleEthernet() { setEthernetEnabled(!ethernetEnabled) }
+    readonly property Timer _ethTimer: Timer {
+        interval: 1500    // give networkd time to (de)configure, then re-poll
+        onTriggered: net.refresh()
+    }
+
     function rescan() {
         scanning = true
-        Quickshell.execDetached(["nmcli", "dev", "wifi", "rescan"])
+        Quickshell.execDetached(["iwctl", "station", _wifiDev, "scan"])
         rescanTimer.restart()
     }
     readonly property Timer _rescanTimer: Timer {

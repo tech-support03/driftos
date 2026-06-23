@@ -39,7 +39,7 @@ for the bars, launcher, and power flyout.
 | Notifications | mako |
 | Wallpaper | swaybg (or swww when installed) — animated cycle via `wallpaper-next` |
 | Audio | PipeWire + WirePlumber |
-| Network | NetworkManager |
+| Network | iwd (wifi) + systemd-networkd (wired) — no NetworkManager |
 | Bluetooth | BlueZ |
 | Terminal | alacritty |
 | Login manager | ly |
@@ -186,7 +186,7 @@ radii, animation durations). Niri's accent reads from the same source.
 │   ├── 04-niri-stack.sh           xdg-portal + niri session entry
 │   ├── 05-bootloader-grub.sh      reused by bootstrap (chroot-safe)
 │   ├── 06-bootloader-limine.sh    reused by bootstrap (chroot-safe)
-│   ├── 07-services.sh             NetworkManager, bluetooth, seatd, ly, pipewire
+│   ├── 07-services.sh             iwd + systemd-networkd, bluetooth, seatd, ly, pipewire
 │   ├── 08-link-dotfiles.sh        symlink dotfiles into ~/.config
 │   └── 09-wallpapers.sh           five sample wallpapers (rendered by swaybg/swww)
 │

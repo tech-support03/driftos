@@ -4,7 +4,12 @@ set -Eeuo pipefail
 
 PKGS_CORE=(
     base-devel git curl wget unzip rsync man-db man-pages
-    networkmanager openssh
+    # Networking: iwd owns wifi (standalone — NOT via NetworkManager, which
+    # fought iwd on this box). Wired DHCP + routes are handled by
+    # systemd-networkd (part of systemd, no package). DNS is left to a static
+    # /etc/resolv.conf, so resolved is intentionally NOT enabled. 07-services.sh
+    # writes the iwd / networkd / polkit config and enables the services.
+    iwd openssh
     pipewire pipewire-pulse pipewire-alsa wireplumber pavucontrol
     bluez bluez-utils blueman
     polkit polkit-gnome xdg-user-dirs xdg-utils

@@ -8,8 +8,8 @@
 // All link state + actions come from services/Network.qml; this file is the
 // UI surface only — current status, wifi on/off, rescan, and a scannable list
 // of APs with inline password entry for secured/unknown networks. The
-// "Advanced" button drops to `nmtui` (ships with NetworkManager) for wired
-// edits and anything this panel intentionally leaves out.
+// "Advanced" button drops to `iwctl` (this box runs iwd standalone) for
+// enterprise setup and anything this panel intentionally leaves out.
 
 import QtQuick
 import Quickshell
@@ -44,14 +44,16 @@ Scope {
     function toggle() { active ? close() : open() }
 
     // Clicking a network row: active → disconnect; open/saved → connect
-    // immediately; enterprise (802.1X) & unknown → hand off to nmtui, which can
-    // capture the username + EAP method a PSK box can't; otherwise secured &
-    // unknown → reveal the inline password field.
+    // immediately; enterprise (802.1X) & unknown → hand off to a terminal
+    // iwctl connect, which prompts for the username + EAP secrets a PSK box
+    // can't; otherwise secured & unknown → reveal the inline password field.
     function activate(n) {
         if (n.active) { net.disconnectWifi(); return }
         if (n.enterprise && !n.saved) {
-            // School/eduroam-style WPA2/WPA3-Enterprise: set up in nmtui.
-            Quickshell.execDetached(["alacritty", "-e", "nmtui", "edit"])
+            // School/eduroam-style WPA2/WPA3-Enterprise: iwctl prompts for the
+            // identity + password interactively and stores it in /var/lib/iwd.
+            Quickshell.execDetached(["alacritty", "-e", "iwctl", "station",
+                                     net._wifiDev, "connect", n.ssid])
             scope.close()
             return
         }
@@ -258,6 +260,58 @@ Scope {
                         }
                     }
 
+                    // ---- ethernet override (only when a wired NIC exists) ----
+                    Item {
+                        width: parent.width
+                        height: 30
+                        visible: scope.net.ethernetPresent
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Ethernet"
+                            color: "#c9c9d0"
+                            font.family: "Inter"
+                            font.pixelSize: 13
+                        }
+                        Text {
+                            anchors.left: ethToggle.right
+                            anchors.leftMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: !scope.net.ethernetEnabled ? "Off"
+                                  : scope.net.ethernetUp ? "Connected"
+                                  : scope.net.ethernetPlugged ? "Connecting…"
+                                  : "No cable"
+                            color: scope.net.ethernetUp ? Theme.blue : "#8e8e96"
+                            font.family: "Inter"
+                            font.pixelSize: 11
+                        }
+
+                        // Pill toggle (mirrors the Wi-Fi one)
+                        Rectangle {
+                            id: ethToggle
+                            anchors.left: parent.left
+                            anchors.leftMargin: 70
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: 40; height: 22; radius: 11
+                            color: scope.net.ethernetEnabled ? Qt.rgba(0.65, 0.85, 1.0, 0.55)
+                                                             : Qt.rgba(1, 1, 1, 0.10)
+                            Behavior on color { ColorAnimation { duration: 180 } }
+                            Rectangle {
+                                width: 16; height: 16; radius: 8
+                                color: "#f4f4f6"
+                                y: 3
+                                x: scope.net.ethernetEnabled ? parent.width - width - 3 : 3
+                                Behavior on x { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: scope.net.toggleEthernet()
+                            }
+                        }
+                    }
+
                     // ---- status message (errors / connecting) ----------------
                     Text {
                         width: parent.width
@@ -438,7 +492,7 @@ Scope {
 
                     Rectangle { width: parent.width; height: 1; color: Qt.rgba(1, 1, 1, 0.07) }
 
-                    // ---- advanced (nmtui) ------------------------------------
+                    // ---- advanced (iwctl) ------------------------------------
                     Rectangle {
                         width: parent.width
                         height: 38
@@ -458,7 +512,7 @@ Scope {
                             anchors.left: parent.left
                             anchors.leftMargin: 40
                             anchors.verticalCenter: parent.verticalCenter
-                            text: "Advanced settings (nmtui)"
+                            text: "Advanced settings (iwctl)"
                             color: "#c9c9d0"
                             font.family: "Inter"
                             font.pixelSize: 13
@@ -468,7 +522,7 @@ Scope {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
-                                Quickshell.execDetached(["alacritty", "-e", "nmtui"])
+                                Quickshell.execDetached(["alacritty", "-e", "iwctl"])
                                 scope.close()
                             }
                         }
