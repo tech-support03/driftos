@@ -55,6 +55,10 @@ link "$DOTFILES_DIR/quickshell"                 "$HOME/.config/quickshell"
 
 # Terminal, notifications, audio visualizer, system utilities.
 link "$DOTFILES_DIR/alacritty/alacritty.toml"   "$HOME/.config/alacritty/alacritty.toml"
+# Neovim. The whole config dir is linked; lazy.nvim bootstraps plugins into
+# ~/.local/share/nvim on first launch, and lazy-lock.json (committed in the
+# repo) pins versions for a reproducible reinstall.
+link "$DOTFILES_DIR/nvim"                        "$HOME/.config/nvim"
 # Interactive shell rc. Unlike the others this lives at ~/.zshrc, not under
 # ~/.config — zsh reads $ZDOTDIR/.zshrc and $ZDOTDIR defaults to $HOME. The
 # fish-style autocomplete (autosuggestions + syntax highlighting + completion)

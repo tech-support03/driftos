@@ -136,3 +136,7 @@ setopt PROMPT_SUBST
 # reprints it. Only when stdout is a tty, so it stays out of piped/captured
 # zsh invocations.
 [[ -t 1 ]] && command -v fastfetch >/dev/null && fastfetch
+
+# terminal-wakatime setup
+export PATH="$HOME/.wakatime:$PATH"
+eval "$(terminal-wakatime init)"

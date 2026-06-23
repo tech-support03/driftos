@@ -12,6 +12,10 @@ PKGS_CORE=(
     wl-clipboard cliphist
     brightnessctl playerctl
     fastfetch htop btop fzf ripgrep fd bat eza zoxide jq
+    # neovim — primary editor. The config (dotfiles/nvim) bootstraps lazy.nvim
+    # and mason itself, so no plugin/LSP packages belong here; Telescope and
+    # Treesitter reuse ripgrep/fd above plus base-devel's compiler.
+    neovim
     alacritty
     # Interactive shell: zsh + fish-style autocomplete. zsh-autosuggestions
     # draws the grey inline suggestion from history; zsh-syntax-highlighting

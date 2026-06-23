@@ -69,6 +69,74 @@ sudo cp -v /usr/share/limine/limine.sys "$ESP/EFI/limine/" 2>/dev/null || true
 # Installed first because the initial setup below runs limine-resign itself, so
 # install-time and update-time use the exact same code path.
 
+# limine-emit-theme — print the general-section theme keys (branding + colours)
+# from /etc/limine-theme.conf. Called by limine-regen-conf below. Colours are
+# data in /etc/limine-theme.conf (NOT baked into the generator) so the look can
+# be re-themed from the rice palette (scripts/theme-limine.sh) without editing
+# this script, and an absent/empty file falls back to plain "Arch Linux"
+# branding — i.e. exactly the previous behaviour, so it can never break boot.
+# These keys live INSIDE limine.conf, so they're covered by the enrolled BLAKE2B
+# config checksum and ride through limine-resign like every other entry.
+# NOTE: keep this byte-identical to the copy installed by scripts/theme-limine.sh.
+sudo install -Dm755 /dev/stdin /usr/local/bin/limine-emit-theme <<'EOF'
+#!/usr/bin/env bash
+set -Eeuo pipefail
+# All colours are bare RRGGBB hex (NO leading '#'). Empty => Limine default.
+LIMINE_BRANDING="Arch Linux"
+LIMINE_BRANDING_COLOUR=""
+LIMINE_HELP_COLOUR=""
+LIMINE_HELP_COLOUR_BRIGHT=""
+LIMINE_BACKDROP=""
+LIMINE_TERM_BG=""
+LIMINE_TERM_BG_BRIGHT=""
+LIMINE_TERM_FG=""
+LIMINE_TERM_FG_BRIGHT=""
+LIMINE_PALETTE=""
+LIMINE_PALETTE_BRIGHT=""
+LIMINE_TERM_MARGIN=""
+LIMINE_TERM_MARGIN_GRADIENT=""
+[[ -f /etc/limine-theme.conf ]] && . /etc/limine-theme.conf
+emit() { [[ -n "$2" ]] && echo "$1: $2"; return 0; }
+echo "interface_branding: $LIMINE_BRANDING"
+emit interface_branding_colour   "$LIMINE_BRANDING_COLOUR"
+emit interface_help_colour        "$LIMINE_HELP_COLOUR"
+emit interface_help_colour_bright "$LIMINE_HELP_COLOUR_BRIGHT"
+emit backdrop                     "$LIMINE_BACKDROP"
+emit term_background              "$LIMINE_TERM_BG"
+emit term_background_bright       "$LIMINE_TERM_BG_BRIGHT"
+emit term_foreground              "$LIMINE_TERM_FG"
+emit term_foreground_bright       "$LIMINE_TERM_FG_BRIGHT"
+emit term_palette                 "$LIMINE_PALETTE"
+emit term_palette_bright          "$LIMINE_PALETTE_BRIGHT"
+emit term_margin                  "$LIMINE_TERM_MARGIN"
+emit term_margin_gradient         "$LIMINE_TERM_MARGIN_GRADIENT"
+EOF
+
+# Default theme data — indigo rice palette, Omarchy-style flat menu with a soft
+# accent margin-gradient frame. Installed only if absent so a re-run never
+# clobbers a palette the user has since synced from rice-theme. Bare RRGGBB hex.
+if [[ ! -f /etc/limine-theme.conf ]]; then
+    sudo install -Dm644 /dev/stdin /etc/limine-theme.conf <<'EOF'
+# /etc/limine-theme.conf — colours + branding for the Limine boot menu.
+# Sourced by /usr/local/bin/limine-emit-theme. Re-theme from your rice palette
+# with: sudo scripts/theme-limine.sh   (then it re-signs via limine-resign).
+# All colours are bare RRGGBB hex (NO leading '#'). Empty => Limine default.
+LIMINE_BRANDING="Arch Linux"
+LIMINE_BRANDING_COLOUR="7d8cff"
+LIMINE_HELP_COLOUR="8e8e96"
+LIMINE_HELP_COLOUR_BRIGHT="c9c9d0"
+LIMINE_BACKDROP="14141b"
+LIMINE_TERM_BG="14141b"
+LIMINE_TERM_BG_BRIGHT="222230"
+LIMINE_TERM_FG="c9c9d0"
+LIMINE_TERM_FG_BRIGHT="f4f4f6"
+LIMINE_PALETTE="2a2a35;f43f5e;2dd4bf;e0af68;60a5fa;5b6ee0;22d3ee;c9c9d0"
+LIMINE_PALETTE_BRIGHT="3a3a48;ff6b81;3ee6cf;f0c07a;7db4ff;7d8cff;5fe0f5;f4f4f6"
+LIMINE_TERM_MARGIN="48"
+LIMINE_TERM_MARGIN_GRADIENT="4"
+EOF
+fi
+
 # limine-regen-conf <ESP> [outfile] — write a limine.conf with BLAKE2B path
 # hashes. Defaults to the live config; the resign helper passes a temp outfile.
 sudo install -Dm755 /dev/stdin /usr/local/bin/limine-regen-conf <<'EOF'
@@ -79,9 +147,9 @@ OUT="${2:-$ESP/limine.conf}"
 ROOT_UUID="$(findmnt -no UUID /)"
 TMP="$(mktemp)"
 {
-    echo "timeout: 2"
+    echo "timeout: 5"
     echo "default_entry: 1"
-    echo "interface_branding: Arch Linux"
+    limine-emit-theme        # branding + colours from /etc/limine-theme.conf
     echo ""
     for vmlinuz in "$ESP"/vmlinuz-*; do
         [[ -f "$vmlinuz" ]] || continue
@@ -100,6 +168,24 @@ TMP="$(mktemp)"
 
 E
     done
+
+    # --- Windows (chainload), optional ------------------------------------
+    # /etc/limine-windows.conf is written once at install time (see the probe
+    # below) with WINDOWS_ESP_GUID=<GPT partition GUID of the Windows ESP>.
+    # Chainloading is the documented Secure Boot EXCEPTION (Limine USAGE.md):
+    # the firmware verifies bootmgfw.efi against db — where our `sbctl
+    # enroll-keys --microsoft` already placed Microsoft's CAs — so this needs
+    # NO blake2b #hash and touches NO firmware keys. Secure Boot stays enabled
+    # and unchanged. Arch (entry 1) stays default; Windows is just listed below.
+    if [[ -f /etc/limine-windows.conf ]]; then
+        WINDOWS_ESP_GUID=""
+        WINDOWS_EFI_PATH="/EFI/Microsoft/Boot/bootmgfw.efi"
+        . /etc/limine-windows.conf
+        if [[ -n "$WINDOWS_ESP_GUID" ]]; then
+            printf '/Windows\n    protocol: efi_chainload\n    path: guid(%s):%s\n\n' \
+                "$WINDOWS_ESP_GUID" "$WINDOWS_EFI_PATH"
+        fi
+    fi
 } > "$TMP"
 install -Dm644 "$TMP" "$OUT"
 rm -f "$TMP"
@@ -170,6 +256,37 @@ else
     warn "Firmware NOT in Setup Mode — keys are created and binaries will be signed,"
     warn "but enrollment is deferred. After first boot, place firmware in Setup Mode"
     warn "and run: sudo sb-finalize"
+fi
+
+# ---- probe for Windows → optional chainload entry -------------------------
+# Find an EFI System Partition (other than our own ESP) that actually contains
+# the Microsoft bootloader, and record its GPT partition GUID in
+# /etc/limine-windows.conf. The generator above turns that into a chainload
+# entry. Chainloading is the Secure Boot exception (firmware verifies
+# bootmgfw.efi against the enrolled MS certs), so this needs no hash and touches
+# no keys. Re-running the module re-probes and keeps the file current.
+log "Probing for a Windows bootloader to add as a chainload entry"
+ESP_SRC_DEV="$(findmnt -no SOURCE "$ESP")"
+win_guid=""
+while read -r _name _parttype _partuuid; do
+    [[ "$_parttype" == c12a7328-f81f-11d2-ba4b-00a0c93ec93b ]] || continue  # ESP type GUID
+    dev="/dev/$_name"
+    [[ "$dev" == "$ESP_SRC_DEV" ]] && continue                              # skip our own ESP
+    probe="$(mktemp -d)"
+    if sudo mount -o ro "$dev" "$probe" 2>/dev/null; then
+        [[ -f "$probe/EFI/Microsoft/Boot/bootmgfw.efi" ]] && win_guid="$_partuuid"
+        sudo umount "$probe" 2>/dev/null || true
+    fi
+    rmdir "$probe" 2>/dev/null || true
+    [[ -n "$win_guid" ]] && break
+done < <(lsblk -rno NAME,PARTTYPE,PARTUUID)
+if [[ -n "$win_guid" ]]; then
+    log "Found Windows on GUID $win_guid — writing /etc/limine-windows.conf"
+    printf 'WINDOWS_ESP_GUID=%s\nWINDOWS_EFI_PATH=%s\n' \
+        "$win_guid" "/EFI/Microsoft/Boot/bootmgfw.efi" \
+        | sudo install -Dm644 /dev/stdin /etc/limine-windows.conf
+else
+    warn "No Windows bootloader found on any ESP — skipping chainload entry"
 fi
 
 # ---- initial bootloader build (same path as every later update) -----------

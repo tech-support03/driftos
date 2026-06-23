@@ -54,6 +54,33 @@ load_theme_file() {
 write_real() { local dst="$1"; mkdir -p "$(dirname "$dst")"; [[ -L "$dst" ]] && rm -f "$dst"; cat > "$dst"; }
 
 active_name() { [[ -r "$ACTIVE_FILE" ]] && tr -d ' \n' < "$ACTIVE_FILE" || echo ""; }
+
+# Some rice surfaces live on root-owned files that only apply at boot / greeter
+# (the Secure-Boot-signed ESP boot menu, and ly's /etc login config). They are
+# NOT re-themed live with the rest of the rice — that needs root (+ a re-sign for
+# Limine). Instead, after a user-driven switch we compare the palette we just
+# applied (C1..C4) against the one each surface was last built from (stamped as a
+# '# rice-synced-colors:' comment) and fire ONE reminder listing whatever drifted.
+# Only surfaces that are themed at all (file present + stamped) are checked; this
+# never touches those files.
+surfaces_sync_reminder() {
+    local cur stamp name file cmd drift=()
+    cur="$(echo "$C1 $C2 $C3 $C4" | tr 'A-Z' 'a-z')"
+    while IFS='|' read -r name file cmd; do
+        [[ -r "$file" ]] || continue
+        stamp="$(sed -n 's/^# rice-synced-colors:[[:space:]]*//p' "$file" | tr 'A-Z' 'a-z')"
+        stamp="$(echo $stamp)"                       # collapse whitespace + trim
+        [[ -n "$stamp" && "$stamp" != "$cur" ]] && drift+=("• $name → $cmd")
+    done <<'SURFACES'
+boot menu|/etc/limine-theme.conf|sudo scripts/theme-limine.sh
+login screen|/etc/ly/config.ini|sudo scripts/theme-ly.sh
+SURFACES
+    [[ ${#drift[@]} -gt 0 ]] || return 0
+    command -v notify-send >/dev/null 2>&1 && \
+        notify-send -t 6000 -u low "Theme: resync boot/login surfaces" \
+            "$(printf '%s\n' "${drift[@]}")" || true
+}
+
 themes_list() { find "$THEMES_DIR" -maxdepth 1 -name '*.theme' -printf '%f\n' 2>/dev/null | sed 's/\.theme$//' | sort; }
 
 # ---- the core: apply C1..C4 everywhere --------------------------------------
@@ -224,14 +251,15 @@ main() {
     case "$cmd" in
         status) active_name; echo ;;
         list)   cmd_list ;;
-        set)    [[ $# -ge 1 ]] || die "usage: rice-theme set <name>"; cmd_set "$1" ;;
+        set)    [[ $# -ge 1 ]] || die "usage: rice-theme set <name>"; cmd_set "$1"; surfaces_sync_reminder ;;
         apply-colors)  # apply 4 colours LIVE without saving a named theme
                 [[ $# -eq 4 ]] || die "usage: rice-theme apply-colors c1 c2 c3 c4"
                 [[ "$1$2$3$4" =~ ^(#[0-9a-fA-F]{6}){4}$ ]] || die "need 4 #rrggbb colours"
                 C1="$1" C2="$2" C3="$3" C4="$4"; apply_palette
                 echo "custom" > "$ACTIVE_FILE"
-                c_info "applied custom palette (NOT saved — 'rice-theme save <name>' to keep it)" ;;
-        next)   cmd_next ;;
+                c_info "applied custom palette (NOT saved — 'rice-theme save <name>' to keep it)"
+                surfaces_sync_reminder ;;
+        next)   cmd_next; surfaces_sync_reminder ;;
         create) [[ $# -eq 5 ]] || die "usage: rice-theme create <name> c1 c2 c3 c4"; cmd_create "$@" ;;
         save)   [[ $# -ge 1 ]] || die "usage: rice-theme save <name>"; cmd_save "$1" ;;
         apply)  local a; a="$(active_name)"; [[ -n "$a" ]] || a="indigo"; cmd_set "$a" ;;

@@ -109,6 +109,27 @@ window-rule {
     clip-to-geometry true
 }
 
+// Games run through gamescope (`gamescope -- %command%`). gamescope nests its
+// own compositor in a single window; on a scrollable-tiling WM that window
+// otherwise opens as a small/unfocused tile, so the game renders into a surface
+// you can't see ("audio, no video"). Open it fullscreen + fully opaque so AAA
+// titles get a clean, tear-free surface instead of a smeared XWayland tile.
+window-rule {
+    match app-id="^gamescope$"
+    open-fullscreen true
+    opacity 1.0
+}
+
+// Forza Horizon 6 (XWayland via Steam, app-id steam_app_<appid>). Run the game
+// in Borderless mode (UserConfigSelections Fullscreen=2) — XWayland *exclusive*
+// fullscreen smears/tears on a scrollable-tiling WM. A borderless window opened
+// at real niri fullscreen fills the output cleanly with vsync compositing.
+window-rule {
+    match app-id="^steam_app_2483190$"
+    open-fullscreen true
+    opacity 1.0
+}
+
 // Side bar / top bar — never give them focus rings or shadows.
 layer-rule {
     match namespace="^quickshell-sidebar$"
@@ -146,6 +167,9 @@ spawn-at-startup "wl-paste" "--type" "text"  "--watch" "cliphist" "store"
 spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 spawn-at-startup "xwayland-satellite"
+// Tracks closed windows so Mod+Ctrl+T can reopen the last one (browsers
+// come back with their session via --restore-last-session).
+spawn-at-startup "reopen-window"
 // No idle daemon: the system stays awake and unlocked until the user
 // acts. Lock is manual only (Mod+L → gtklock). Suspend/poweroff are
 // manual only (Quickshell power flyout). swayidle is intentionally not
@@ -158,6 +182,9 @@ binds {
     Mod+Return         { spawn "alacritty"; }
     Mod+Space          { spawn "qs" "ipc" "call" "launcher" "toggle"; }
     Mod+W              { close-window; }
+    // Reopen the last closed window (Chrome's Ctrl+Shift+T, system-wide).
+    // Browsers restore their session; other apps relaunch fresh.
+    Mod+Ctrl+T         { spawn "reopen-window" "pop"; }
     Mod+L              { spawn "sh" "-c" "pgrep -x gtklock || gtklock -d -c /home/arjun/.config/gtklock/config.ini"; }
     Mod+Escape         { spawn "qs" "ipc" "call" "power" "toggle"; }
     Mod+Shift+B        { spawn "/home/arjun/.local/bin/wallpaper-next"; }

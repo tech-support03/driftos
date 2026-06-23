@@ -15,6 +15,11 @@ sudo usermod -aG seat,video,input,audio,wheel "$USER" || true
 log "Enabling ly login manager"
 sudo systemctl enable ly@tty1.service
 
+# Theme the greeter from the rice palette (falls back to indigo if rice-theme
+# hasn't run yet). Idempotent; only edits colour/appearance keys in place.
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+sudo "$REPO_ROOT/scripts/theme-ly.sh" || log "ly theming skipped (run later: sudo scripts/theme-ly.sh)"
+
 # Hypervisor guest agents — harmless on bare metal because the service files
 # only exist if the matching package was installed.
 for unit in vmtoolsd.service vmware-vmblock-fuse.service \
